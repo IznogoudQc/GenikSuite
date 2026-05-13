@@ -5,6 +5,7 @@ import { getDb, closeDb } from '../db/client'
 import { registerAccessHandlers } from './ipc/access'
 import { registerTimesheetHandlers } from './ipc/timesheet'
 import { registerConfigHandlers } from './ipc/config'
+import { IPC } from '../src/shared/types'
 
 const isDev = !app.isPackaged
 
@@ -48,6 +49,10 @@ app.whenReady().then(() => {
   registerAccessHandlers(ipcMain, db)
   registerTimesheetHandlers(ipcMain, db)
   registerConfigHandlers(ipcMain, db)
+
+  // Version de l'app (lue depuis package.json à la compilation/install).
+  // Le renderer s'en sert pour afficher le numéro dans la sidebar.
+  ipcMain.handle(IPC.AppVersion, () => app.getVersion())
 
   createWindow()
 

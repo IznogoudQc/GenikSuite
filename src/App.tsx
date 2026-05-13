@@ -1,12 +1,21 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AccessPage } from './pages/AccessPage'
 import { TimesheetPage } from './pages/TimesheetPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { invoke, IPC } from './lib/ipc'
 
 type Tab = 'access' | 'timesheet' | 'settings'
 
 export function App() {
   const [tab, setTab] = useState<Tab>('access')
+  const [version, setVersion] = useState<string>('')
+
+  // Récupère la vraie version de l'app au démarrage (depuis package.json côté main).
+  useEffect(() => {
+    invoke<string>(IPC.AppVersion)
+      .then(setVersion)
+      .catch(() => setVersion(''))
+  }, [])
 
   return (
     <div className="flex h-full" style={{ backgroundColor: 'var(--color-canvas)' }}>
@@ -41,7 +50,9 @@ export function App() {
           label="Paramètres"
           icon="⚙"
         />
-        <span className="text-[10px] text-zinc-500 mt-3 select-none">v0.1.0</span>
+        <span className="text-[10px] text-zinc-500 mt-3 select-none">
+          {version ? `v${version}` : ''}
+        </span>
       </aside>
 
       {/* Contenu principal */}

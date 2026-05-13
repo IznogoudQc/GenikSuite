@@ -70,7 +70,9 @@ export const IPC = {
   TimeSummaryByProject: 'time:summary-by-project',
   // Config
   ConfigGet: 'config:get',
-  ConfigSet: 'config:set'
+  ConfigSet: 'config:set',
+  // App
+  AppVersion: 'app:version'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
