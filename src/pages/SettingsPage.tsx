@@ -63,7 +63,7 @@ export function SettingsPage() {
   }
 
   async function deleteSubfolder(id: number) {
-    if (!safeConfirm('Supprimer ce sous-dossier ?')) return
+    if (!(await safeConfirm('Supprimer ce sous-dossier ?'))) return
     await invoke(IPC.SubfolderDelete, id)
     void load()
   }

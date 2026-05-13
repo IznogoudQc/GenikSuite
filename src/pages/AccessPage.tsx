@@ -90,7 +90,7 @@ export function AccessPage() {
 
   async function handleDelete() {
     if (!selectedNumber) return
-    if (!safeConfirm(`Retirer ${selectedNumber} de la liste ?`)) return
+    if (!(await safeConfirm(`Retirer ${selectedNumber} de la liste ?`))) return
     await invoke(IPC.ProjectDelete, selectedNumber)
     setSelectedNumber('')
     void refresh()

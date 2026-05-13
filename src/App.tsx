@@ -5,6 +5,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { UpdateBanner } from './components/UpdateBanner'
 import { StatusBar } from './components/StatusBar'
 import { PopupTimer } from './components/PopupTimer'
+import { ConfirmHost } from './components/ConfirmHost'
 import { invoke, IPC, CONFIG_CHANGED_EVENT } from './lib/ipc'
 import type { ProjectDTO, NewTimeEntryDTO } from './shared/types'
 
@@ -111,6 +112,9 @@ export function App() {
 
       {/* Bannière auto-updater (en bas à droite, flottante) */}
       <UpdateBanner />
+
+      {/* Hôte pour les confirmations React (remplace window.confirm) */}
+      <ConfirmHost />
 
       {/* PopupTimer global : reste monté même si on quitte la page Timesheet */}
       {timerOn && (

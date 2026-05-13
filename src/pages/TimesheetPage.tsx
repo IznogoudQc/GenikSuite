@@ -53,13 +53,13 @@ export function TimesheetPage({
   }, [refreshWeek])
 
   async function deleteEntry(id: number) {
-    if (!safeConfirm('Supprimer cette entrée ?')) return
+    if (!(await safeConfirm('Supprimer cette entrée ?'))) return
     await invoke(IPC.TimeEntryDelete, id)
     void refreshWeek()
   }
 
   async function clearReport() {
-    if (!safeConfirm('Effacer TOUTES les entrées de la feuille de temps ?\nCette action est irréversible.')) return
+    if (!(await safeConfirm('Effacer TOUTES les entrées de la feuille de temps ?\nCette action est irréversible.'))) return
     await invoke(IPC.TimeEntriesClear)
     void refreshWeek()
   }

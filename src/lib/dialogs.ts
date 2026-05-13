@@ -1,19 +1,41 @@
-import { invoke, IPC } from './ipc'
+/**
+ * Système de confirmation 100% React (pas de dialog native).
+ *
+ * Pourquoi : `window.confirm()` natif ouvre une boîte de dialogue Windows qui
+ * vole le focus clavier de la fenêtre Electron. Après fermeture, le focus
+ * n'est pas restauré au webContents et l'utilisateur ne peut plus taper.
+ *
+ * Solution : on remplace par une modale React rendue dans le DOM. Pas de
+ * dialogue OS → pas de vol de focus possible.
+ */
+
+type Resolver = (ok: boolean) => void
+type Handler = (message: string, resolve: Resolver) => void
+
+let currentHandler: Handler | null = null
 
 /**
- * Wrapper autour de `window.confirm()` qui restaure le focus de la fenêtre
- * Electron après que la dialog native est fermée.
- *
- * Bug Electron/Windows : `window.confirm()` ouvre une dialog modale native,
- * et quand elle se ferme, le focus clavier reste capté par l'OS au lieu de
- * revenir au webContents. Résultat : l'utilisateur ne peut plus taper dans
- * les inputs tant qu'il n'a pas cliqué hors puis dans l'app.
- *
- * Ce wrapper appelle un handler IPC qui force `mainWindow.focus()` côté main.
+ * Appelé une seule fois par <ConfirmHost> au montage pour s'enregistrer
+ * comme gestionnaire des appels safeConfirm().
  */
-export function safeConfirm(message: string): boolean {
-  const ok = window.confirm(message)
-  // Force le re-focus de la fenêtre principale (asynchrone, non bloquant)
-  void invoke(IPC.AppRefocus).catch(() => {})
-  return ok
+export function registerConfirmHandler(handler: Handler | null): void {
+  currentHandler = handler
+}
+
+/**
+ * Affiche une modale React de confirmation et retourne une Promise<boolean>.
+ *
+ * Usage : `if (!(await safeConfirm('Supprimer ?'))) return`
+ *
+ * Fallback sur `window.confirm()` natif si le ConfirmHost n'est pas monté.
+ */
+export function safeConfirm(message: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!currentHandler) {
+      // Fallback (ne devrait jamais arriver si ConfirmHost est dans App.tsx)
+      resolve(window.confirm(message))
+      return
+    }
+    currentHandler(message, resolve)
+  })
 }
