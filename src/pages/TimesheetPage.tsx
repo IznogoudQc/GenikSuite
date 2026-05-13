@@ -9,6 +9,7 @@ import type {
 import { addDays, fmtDate, mondayOf } from '../lib/time'
 import { PopupTimer } from '../components/PopupTimer'
 import { BlockCounter } from '../components/BlockCounter'
+import { WeekCalendar } from '../components/WeekCalendar'
 import { PageHeader } from '../components/PageHeader'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -107,6 +108,9 @@ export function TimesheetPage() {
             Cette semaine
           </Button>
         </div>
+
+        {/* Vue calendaire de la semaine */}
+        <WeekCalendar weekStart={weekStart} entries={entries} />
 
         {/* Compteur de blocs par projet */}
         <BlockCounter summary={summary} intervalMin={intervalMin} />

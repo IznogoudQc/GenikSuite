@@ -12,11 +12,24 @@ function hhmmToMinutes(hhmm: string): number {
   return h * 60 + m
 }
 
-/** Fin proposée par défaut : au moins un intervalle après le début, et au moins l'heure ronde courante. */
+/**
+ * Fin proposée par défaut : l'heure ronde actuelle (le bloc qui vient juste
+ * de se terminer). Doit être au moins `start + intervalMin` si pendingStart
+ * date d'un report et qu'on accumule plusieurs intervalles.
+ */
 function defaultEnd(start: Date, intervalMin: number): Date {
   const minEnd = new Date(start.getTime() + intervalMin * 60_000)
   const nowFloor = floorToInterval(new Date(), intervalMin)
   return nowFloor.getTime() > minEnd.getTime() ? nowFloor : minEnd
+}
+
+/**
+ * Début proposé par défaut : un intervalle AVANT l'heure ronde actuelle.
+ * À 10h05, on demande pour la plage 10h00 → 10h05 (ce qui vient d'être travaillé).
+ */
+function defaultStart(intervalMin: number): Date {
+  const nowFloor = floorToInterval(new Date(), intervalMin)
+  return new Date(nowFloor.getTime() - intervalMin * 60_000)
 }
 
 /**
@@ -43,7 +56,7 @@ export function PopupTimer({
 }) {
   const [open, setOpen] = useState(false)
   const [blockStart, setBlockStart] = useState<Date>(
-    () => pendingStart ?? floorToInterval(new Date(), intervalMin)
+    () => pendingStart ?? defaultStart(intervalMin)
   )
   const [startStr, setStartStr] = useState('')
   const [endStr, setEndStr] = useState('')
@@ -77,7 +90,9 @@ export function PopupTimer({
       const next = ceilToInterval(new Date(), intervalMin)
       const delay = Math.max(0, next.getTime() - Date.now())
       timerRef.current = window.setTimeout(() => {
-        const start = pendingStartRef.current ?? floorToInterval(new Date(), intervalMin)
+        // Le popup arrive à la fin du bloc : on demande pour le bloc qui vient
+        // juste de se terminer (ex: à 10h05, on qualifie la plage 10h00→10h05).
+        const start = pendingStartRef.current ?? defaultStart(intervalMin)
         const end = defaultEnd(start, intervalMin)
         setBlockStart(start)
         setStartStr(fmtTime(start))
