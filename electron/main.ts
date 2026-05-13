@@ -42,6 +42,39 @@ function createWindow(): void {
   }
 }
 
+/**
+ * Configure l'auto-updater : forwarde tous les événements vers le renderer
+ * pour qu'une bannière puisse afficher l'état (checking, downloading, etc.).
+ */
+function setupAutoUpdater(): void {
+  // autoUpdater ne fonctionne pas en dev (pas de version installée).
+  if (isDev) return
+
+  const push = (data: unknown) => mainWindow?.webContents.send(IPC.UpdaterEvent, data)
+
+  autoUpdater.on('checking-for-update', () => push({ type: 'checking' }))
+  autoUpdater.on('update-available', (info) =>
+    push({ type: 'available', version: info.version })
+  )
+  autoUpdater.on('update-not-available', () => push({ type: 'not-available' }))
+  autoUpdater.on('download-progress', (p) =>
+    push({ type: 'progress', percent: Math.round(p.percent) })
+  )
+  autoUpdater.on('update-downloaded', (info) =>
+    push({ type: 'downloaded', version: info.version })
+  )
+  autoUpdater.on('error', (err) => push({ type: 'error', message: err.message }))
+
+  // Bouton "Redémarrer maintenant" depuis la bannière.
+  ipcMain.handle(IPC.UpdaterInstallNow, () => {
+    autoUpdater.quitAndInstall()
+  })
+
+  autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+    console.error('autoUpdater error:', err)
+  })
+}
+
 app.whenReady().then(() => {
   // DB initialisée une seule fois, partagée par tous les handlers.
   const db = getDb(getDbPath())
@@ -55,13 +88,7 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.AppVersion, () => app.getVersion())
 
   createWindow()
-
-  // Auto-update en production seulement
-  if (!isDev) {
-    autoUpdater.checkForUpdatesAndNotify().catch((err) => {
-      console.error('autoUpdater error:', err)
-    })
-  }
+  setupAutoUpdater()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

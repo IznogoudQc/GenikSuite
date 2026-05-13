@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AccessPage } from './pages/AccessPage'
 import { TimesheetPage } from './pages/TimesheetPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { UpdateBanner } from './components/UpdateBanner'
 import { invoke, IPC } from './lib/ipc'
 
 type Tab = 'access' | 'timesheet' | 'settings'
@@ -61,6 +62,9 @@ export function App() {
         {tab === 'timesheet' && <TimesheetPage />}
         {tab === 'settings' && <SettingsPage />}
       </main>
+
+      {/* Bannière auto-updater (statut des mises à jour en bas à droite) */}
+      <UpdateBanner />
     </div>
   )
 }

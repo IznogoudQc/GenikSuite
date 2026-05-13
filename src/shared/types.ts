@@ -72,7 +72,19 @@ export const IPC = {
   ConfigGet: 'config:get',
   ConfigSet: 'config:set',
   // App
-  AppVersion: 'app:version'
+  AppVersion: 'app:version',
+  // Auto-updater
+  UpdaterEvent: 'updater:event',          // main → renderer (push)
+  UpdaterInstallNow: 'updater:install-now' // renderer → main (action)
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
+
+// Événements émis par electron-updater vers le renderer.
+export type UpdaterEvent =
+  | { type: 'checking' }
+  | { type: 'available'; version: string }
+  | { type: 'not-available' }
+  | { type: 'progress'; percent: number }
+  | { type: 'downloaded'; version: string }
+  | { type: 'error'; message: string }
