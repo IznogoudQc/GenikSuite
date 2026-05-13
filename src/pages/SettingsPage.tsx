@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { invoke, IPC, CONFIG_CHANGED_EVENT } from '../lib/ipc'
+import { safeConfirm } from '../lib/dialogs'
 import type { SubfolderDTO } from '../shared/types'
 import { PageHeader } from '../components/PageHeader'
 import { Card } from '../components/Card'
@@ -62,7 +63,7 @@ export function SettingsPage() {
   }
 
   async function deleteSubfolder(id: number) {
-    if (!confirm('Supprimer ce sous-dossier ?')) return
+    if (!safeConfirm('Supprimer ce sous-dossier ?')) return
     await invoke(IPC.SubfolderDelete, id)
     void load()
   }

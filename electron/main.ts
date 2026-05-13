@@ -32,11 +32,38 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.on('ready-to-show', () => mainWindow?.show())
+  // Sur Windows, show() seul ne donne pas toujours le focus clavier à la fenêtre :
+  // l'utilisateur voit l'app mais ne peut pas taper tant qu'il n'a pas cliqué hors
+  // puis re-cliqué dessus. Workaround connu : setAlwaysOnTop bref force le focus
+  // au niveau système, puis on focus le webContents pour activer la saisie clavier.
+  mainWindow.on('ready-to-show', () => {
+    mainWindow?.show()
+    if (process.platform === 'win32') {
+      mainWindow?.setAlwaysOnTop(true)
+      setTimeout(() => {
+        mainWindow?.setAlwaysOnTop(false)
+        mainWindow?.focus()
+        mainWindow?.webContents.focus()
+      }, 50)
+    } else {
+      mainWindow?.focus()
+      mainWindow?.webContents.focus()
+    }
+  })
+
+  // Sur Windows certaines actions (notif système, popup auto-updater) volent le
+  // focus pendant l'exécution. Quand l'utilisateur reclique sur la fenêtre,
+  // on s'assure que le webContents reprend bien le focus clavier.
+  mainWindow.on('focus', () => {
+    mainWindow?.webContents.focus()
+  })
 
   if (isDev && process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
-    mainWindow.webContents.openDevTools()
+    // DevTools en fenêtre séparée pour ne pas voler le focus clavier de la window.
+    // Bug Windows connu : openDevTools() par défaut capture le focus → on ne peut
+    // pas taper dans les inputs tant qu'on n'a pas cliqué hors de l'app.
+    mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
@@ -86,6 +113,14 @@ app.whenReady().then(() => {
   // Version de l'app (lue depuis package.json à la compilation/install).
   // Le renderer s'en sert pour afficher le numéro dans la sidebar.
   ipcMain.handle(IPC.AppVersion, () => app.getVersion())
+
+  // Force le re-focus de la fenêtre + clavier après une dialog native
+  // (confirm/alert) qui vole le focus sur Windows.
+  ipcMain.handle(IPC.AppRefocus, () => {
+    if (!mainWindow) return
+    mainWindow.focus()
+    mainWindow.webContents.focus()
+  })
 
   createWindow()
   setupAutoUpdater()

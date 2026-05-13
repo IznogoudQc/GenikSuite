@@ -73,6 +73,7 @@ export const IPC = {
   ConfigSet: 'config:set',
   // App
   AppVersion: 'app:version',
+  AppRefocus: 'app:refocus',
   // Auto-updater
   UpdaterEvent: 'updater:event',          // main → renderer (push)
   UpdaterInstallNow: 'updater:install-now' // renderer → main (action)

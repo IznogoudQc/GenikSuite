@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { invoke, IPC } from '../lib/ipc'
+import { safeConfirm } from '../lib/dialogs'
 import type { ProjectDTO, SubfolderDTO } from '../shared/types'
 import { PageHeader } from '../components/PageHeader'
 import { Card } from '../components/Card'
@@ -17,6 +18,17 @@ export function AccessPage() {
   useEffect(() => {
     void refresh()
   }, [])
+
+  // Quand on change de projet dans le dropdown, pré-remplit le champ commentaire
+  // avec le commentaire actuel du projet (vide si nouveau projet ou aucune sélection).
+  useEffect(() => {
+    if (!selectedNumber) {
+      setComment('')
+      return
+    }
+    const found = projects.find((p) => p.number === selectedNumber)
+    setComment(found?.comment ?? '')
+  }, [selectedNumber, projects])
 
   async function refresh() {
     const [ps, ss] = await Promise.all([
@@ -43,7 +55,8 @@ export function AccessPage() {
     }
     setStatus(`Projet ${number} validé.`)
     setNewNumber('')
-    setComment('')
+    // Garde le commentaire affiché (au lieu de l'effacer) pour que l'utilisateur
+    // voie ce qui a été enregistré. Il sera re-synchronisé par le useEffect.
     setSelectedNumber(number)
     void refresh()
   }
@@ -77,7 +90,7 @@ export function AccessPage() {
 
   async function handleDelete() {
     if (!selectedNumber) return
-    if (!confirm(`Retirer ${selectedNumber} de la liste ?`)) return
+    if (!safeConfirm(`Retirer ${selectedNumber} de la liste ?`)) return
     await invoke(IPC.ProjectDelete, selectedNumber)
     setSelectedNumber('')
     void refresh()

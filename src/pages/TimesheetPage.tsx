@@ -10,6 +10,7 @@ import { WeekCalendar } from '../components/WeekCalendar'
 import { PageHeader } from '../components/PageHeader'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import { safeConfirm } from '../lib/dialogs'
 import { TIME_ENTRIES_CHANGED_EVENT } from '../App'
 
 /**
@@ -52,13 +53,13 @@ export function TimesheetPage({
   }, [refreshWeek])
 
   async function deleteEntry(id: number) {
-    if (!confirm('Supprimer cette entrée ?')) return
+    if (!safeConfirm('Supprimer cette entrée ?')) return
     await invoke(IPC.TimeEntryDelete, id)
     void refreshWeek()
   }
 
   async function clearReport() {
-    if (!confirm('Effacer TOUTES les entrées de la feuille de temps ?\nCette action est irréversible.')) return
+    if (!safeConfirm('Effacer TOUTES les entrées de la feuille de temps ?\nCette action est irréversible.')) return
     await invoke(IPC.TimeEntriesClear)
     void refreshWeek()
   }
