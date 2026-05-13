@@ -28,7 +28,7 @@ export function UpdateBanner() {
     return (
       <div className={`${baseClass} border-zinc-200`}>
         <Spinner />
-        <span className="text-sm text-zinc-700">Vérification d'une mise à jour…</span>
+        <span className="text-sm text-zinc-700">{"Vérification d'une mise à jour…"}</span>
       </div>
     )
   }
@@ -68,7 +68,7 @@ export function UpdateBanner() {
           <div className="text-sm font-medium text-zinc-900">
             Mise à jour v{event.version} prête
           </div>
-          <div className="text-xs text-zinc-500">Redémarrez pour l'appliquer.</div>
+          <div className="text-xs text-zinc-500">{"Redémarrez pour l'appliquer."}</div>
         </div>
         <button
           onClick={() => window.genik.invoke(IPC.UpdaterInstallNow)}
