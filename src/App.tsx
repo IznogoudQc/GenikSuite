@@ -3,68 +3,126 @@ import { AccessPage } from './pages/AccessPage'
 import { TimesheetPage } from './pages/TimesheetPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { UpdateBanner } from './components/UpdateBanner'
-import { invoke, IPC } from './lib/ipc'
+import { StatusBar } from './components/StatusBar'
+import { PopupTimer } from './components/PopupTimer'
+import { invoke, IPC, CONFIG_CHANGED_EVENT } from './lib/ipc'
+import type { ProjectDTO, NewTimeEntryDTO } from './shared/types'
 
 type Tab = 'access' | 'timesheet' | 'settings'
+
+// Événement DOM émis quand une entrée de temps change : la page Timesheet l'écoute pour refresh.
+export const TIME_ENTRIES_CHANGED_EVENT = 'geniksuite:time-entries-changed'
 
 export function App() {
   const [tab, setTab] = useState<Tab>('access')
   const [version, setVersion] = useState<string>('')
 
-  // Récupère la vraie version de l'app au démarrage (depuis package.json côté main).
+  // État du timer remonté ici pour rester actif quel que soit l'onglet affiché.
+  const [timerOn, setTimerOn] = useState(false)
+  const [pendingStart, setPendingStart] = useState<Date | null>(null)
+  const [intervalMin, setIntervalMin] = useState(30)
+  const [nextPopupAt, setNextPopupAt] = useState<Date | null>(null)
+  const [projects, setProjects] = useState<ProjectDTO[]>([])
+
+  // Version + intervalMin + projets chargés au démarrage.
   useEffect(() => {
     invoke<string>(IPC.AppVersion)
       .then(setVersion)
       .catch(() => setVersion(''))
   }, [])
 
+  useEffect(() => {
+    async function loadIntervalMin() {
+      const v = await invoke<string>(IPC.ConfigGet, 'intervalMinutes')
+      setIntervalMin(parseInt(v, 10) || 30)
+    }
+    async function loadProjects() {
+      setProjects(await invoke<ProjectDTO[]>(IPC.ProjectsList))
+    }
+    void loadIntervalMin()
+    void loadProjects()
+    window.addEventListener(CONFIG_CHANGED_EVENT, loadIntervalMin)
+    return () => window.removeEventListener(CONFIG_CHANGED_EVENT, loadIntervalMin)
+  }, [])
+
+  // Enregistre une entrée de temps depuis le PopupTimer global.
+  async function handleAddEntry(entry: NewTimeEntryDTO) {
+    await invoke(IPC.TimeEntryAdd, entry)
+    setPendingStart(null)
+    window.dispatchEvent(new Event(TIME_ENTRIES_CHANGED_EVENT))
+  }
+
   return (
-    <div className="flex h-full" style={{ backgroundColor: 'var(--color-canvas)' }}>
-      {/* Sidebar étroite avec icônes uniquement */}
-      <aside
-        className="w-16 flex flex-col items-center py-3"
-        style={{ backgroundColor: 'var(--color-sidebar)', color: 'var(--color-sidebar-fg)' }}
-      >
-        {/* Logo / brand */}
-        <div className="mb-6 w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
-          v2
-        </div>
+    <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--color-canvas)' }}>
+      {/* Row principale : sidebar + main */}
+      <div className="flex flex-1 min-h-0">
+        {/* Sidebar étroite avec icônes uniquement */}
+        <aside
+          className="w-16 flex flex-col items-center py-3"
+          style={{ backgroundColor: 'var(--color-sidebar)', color: 'var(--color-sidebar-fg)' }}
+        >
+          {/* Logo / brand */}
+          <div className="mb-6 w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
+            v2
+          </div>
 
-        <nav className="flex flex-col gap-2 flex-1">
+          <nav className="flex flex-col gap-2 flex-1">
+            <SideIcon
+              active={tab === 'access'}
+              onClick={() => setTab('access')}
+              label="Accès projets"
+              icon="📁"
+            />
+            <SideIcon
+              active={tab === 'timesheet'}
+              onClick={() => setTab('timesheet')}
+              label="Feuille de temps"
+              icon="⏱"
+            />
+          </nav>
+
           <SideIcon
-            active={tab === 'access'}
-            onClick={() => setTab('access')}
-            label="Accès projets"
-            icon="📁"
+            active={tab === 'settings'}
+            onClick={() => setTab('settings')}
+            label="Paramètres"
+            icon="⚙"
           />
-          <SideIcon
-            active={tab === 'timesheet'}
-            onClick={() => setTab('timesheet')}
-            label="Feuille de temps"
-            icon="⏱"
-          />
-        </nav>
+          <span className="text-[10px] text-zinc-500 mt-3 select-none">
+            {version ? `v${version}` : ''}
+          </span>
+        </aside>
 
-        <SideIcon
-          active={tab === 'settings'}
-          onClick={() => setTab('settings')}
-          label="Paramètres"
-          icon="⚙"
-        />
-        <span className="text-[10px] text-zinc-500 mt-3 select-none">
-          {version ? `v${version}` : ''}
-        </span>
-      </aside>
+        {/* Contenu principal */}
+        <main className="flex-1 overflow-auto">
+          {tab === 'access' && <AccessPage />}
+          {tab === 'timesheet' && (
+            <TimesheetPage
+              timerOn={timerOn}
+              onToggleTimer={() => setTimerOn((v) => !v)}
+              intervalMin={intervalMin}
+            />
+          )}
+          {tab === 'settings' && <SettingsPage />}
+        </main>
+      </div>
 
-      {/* Contenu principal */}
-      <main className="flex-1 overflow-auto">
-        {tab === 'access' && <AccessPage />}
-        {tab === 'timesheet' && <TimesheetPage />}
-        {tab === 'settings' && <SettingsPage />}
-      </main>
+      {/* StatusBar : compte à rebours du prochain popup (visible quand timer actif) */}
+      <StatusBar timerOn={timerOn} nextPopupAt={nextPopupAt} />
 
-      {/* Bannière auto-updater (statut des mises à jour en bas à droite) */}
+      {/* Bannière auto-updater (en bas à droite, flottante) */}
       <UpdateBanner />
+
+      {/* PopupTimer global : reste monté même si on quitte la page Timesheet */}
+      {timerOn && (
+        <PopupTimer
+          intervalMin={intervalMin}
+          projects={projects}
+          pendingStart={pendingStart}
+          onSubmit={handleAddEntry}
+          onSkip={(start) => setPendingStart(start)}
+          onSchedule={setNextPopupAt}
+        />
+      )}
     </div>
   )
 }

@@ -45,7 +45,8 @@ export function PopupTimer({
   projects,
   pendingStart,
   onSubmit,
-  onSkip
+  onSkip,
+  onSchedule
 }: {
   intervalMin: number
   projects: ProjectDTO[]
@@ -53,6 +54,8 @@ export function PopupTimer({
   pendingStart: Date | null
   onSubmit: (entry: NewTimeEntryDTO) => void
   onSkip: (start: Date) => void
+  /** Appelé chaque fois qu'un prochain popup est planifié (sert au compte à rebours du StatusBar). */
+  onSchedule?: (nextPopupAt: Date) => void
 }) {
   const [open, setOpen] = useState(false)
   const [blockStart, setBlockStart] = useState<Date>(
@@ -85,9 +88,16 @@ export function PopupTimer({
     return () => window.removeEventListener(CONFIG_CHANGED_EVENT, refreshSoundPref)
   }, [])
 
+  // Garde la dernière référence du callback onSchedule sans re-déclencher l'effet
+  const onScheduleRef = useRef(onSchedule)
+  useEffect(() => {
+    onScheduleRef.current = onSchedule
+  }, [onSchedule])
+
   useEffect(() => {
     function schedule() {
       const next = ceilToInterval(new Date(), intervalMin)
+      onScheduleRef.current?.(next)
       const delay = Math.max(0, next.getTime() - Date.now())
       timerRef.current = window.setTimeout(() => {
         // Le popup arrive à la fin du bloc : on demande pour le bloc qui vient

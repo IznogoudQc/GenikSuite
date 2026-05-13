@@ -1,28 +1,34 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { invoke, IPC } from '../lib/ipc'
 import type {
-  ProjectDTO,
   TimeEntryDTO,
-  ProjectBlockSummary,
-  NewTimeEntryDTO
+  ProjectBlockSummary
 } from '../shared/types'
 import { addDays, fmtDate, mondayOf } from '../lib/time'
-import { PopupTimer } from '../components/PopupTimer'
 import { BlockCounter } from '../components/BlockCounter'
 import { WeekCalendar } from '../components/WeekCalendar'
 import { PageHeader } from '../components/PageHeader'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import { TIME_ENTRIES_CHANGED_EVENT } from '../App'
 
-export function TimesheetPage() {
-  const [projects, setProjects] = useState<ProjectDTO[]>([])
+/**
+ * Page Feuille de temps. Le state du timer (timerOn, pendingStart, intervalMin,
+ * PopupTimer) vit dans App.tsx pour que le timer reste actif quand on navigue
+ * sur d'autres onglets.
+ */
+export function TimesheetPage({
+  timerOn,
+  onToggleTimer,
+  intervalMin
+}: {
+  timerOn: boolean
+  onToggleTimer: () => void
+  intervalMin: number
+}) {
   const [entries, setEntries] = useState<TimeEntryDTO[]>([])
   const [summary, setSummary] = useState<ProjectBlockSummary[]>([])
   const [weekStart, setWeekStart] = useState<Date>(() => mondayOf(new Date()))
-  const [intervalMin, setIntervalMin] = useState(30)
-  const [timerOn, setTimerOn] = useState(false)
-  // Heure de début reportée quand un popup est ignoré : le prochain popup la réutilise.
-  const [pendingStart, setPendingStart] = useState<Date | null>(null)
 
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
 
@@ -37,27 +43,13 @@ export function TimesheetPage() {
     setSummary(sum)
   }, [weekStart, weekEnd])
 
-  useEffect(() => {
-    async function loadConfig() {
-      const v = await invoke<string>(IPC.ConfigGet, 'intervalMinutes')
-      setIntervalMin(parseInt(v, 10) || 30)
-    }
-    async function loadProjects() {
-      setProjects(await invoke<ProjectDTO[]>(IPC.ProjectsList))
-    }
-    void loadConfig()
-    void loadProjects()
-  }, [])
-
+  // Recharge quand la semaine change OU quand une entrée est ajoutée (event global).
   useEffect(() => {
     void refreshWeek()
+    const handler = () => void refreshWeek()
+    window.addEventListener(TIME_ENTRIES_CHANGED_EVENT, handler)
+    return () => window.removeEventListener(TIME_ENTRIES_CHANGED_EVENT, handler)
   }, [refreshWeek])
-
-  async function addEntry(entry: NewTimeEntryDTO) {
-    await invoke(IPC.TimeEntryAdd, entry)
-    setPendingStart(null) // bloc enregistré : plus rien à reporter
-    void refreshWeek()
-  }
 
   async function deleteEntry(id: number) {
     if (!confirm('Supprimer cette entrée ?')) return
@@ -84,7 +76,7 @@ export function TimesheetPage() {
             <Button
               variant={timerOn ? 'danger' : 'primary'}
               icon={timerOn ? '⏹' : '▶'}
-              onClick={() => setTimerOn((v) => !v)}
+              onClick={onToggleTimer}
             >
               {timerOn ? 'Arrêter' : 'Démarrer'}
             </Button>
@@ -158,16 +150,6 @@ export function TimesheetPage() {
           </table>
         </Card>
       </div>
-
-      {timerOn && (
-        <PopupTimer
-          intervalMin={intervalMin}
-          projects={projects}
-          pendingStart={pendingStart}
-          onSubmit={addEntry}
-          onSkip={(start) => setPendingStart(start)}
-        />
-      )}
     </div>
   )
 }
