@@ -17,7 +17,7 @@ export function App() {
       >
         {/* Logo / brand */}
         <div className="mb-6 w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
-          GS
+          v2
         </div>
 
         <nav className="flex flex-col gap-2 flex-1">
