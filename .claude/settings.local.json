@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "PowerShell(Test-Path *)",
+      "Bash(npm run *)",
+      "PowerShell(npm *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(Test-Path \"C:\\\\Windows\\\\System32\\\\curl.exe\"; Test-Path \"C:\\\\Windows\\\\System32\\\\tar.exe\"; Test-Path \"C:\\\\Windows\\\\System32\\\\where.exe\"; where.exe winget 2>$null; where.exe curl 2>$null; $PSVersionTable.PSVersion.ToString\\(\\))",
+      "Bash(curl -s https://nodejs.org/dist/index.json)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);const v20=j.find\\(x=>x.version.startsWith\\('v20.'\\)\\);console.log\\(v20.version, v20.lts\\);}\\)\")",
+      "Bash(sleep 8)",
+      "Bash(wc -c dev-output.log)",
+      "Bash(cat dev-output.log)",
+      "Bash(powershell -NoProfile -Command \"Get-Process node,electron -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,StartTime | Format-Table -AutoSize\")"
+    ]
+  }
+}

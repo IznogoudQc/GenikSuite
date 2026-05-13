@@ -1,0 +1,21 @@
+node_modules/
+out/
+dist/
+build/icon.ico
+*.log
+.DS_Store
+.env
+.env.local
+
+# Données locales (jamais commitées)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# IDE
+.vscode/
+.idea/
+
+# Drizzle
+db/migrations/meta/_journal.json.bak

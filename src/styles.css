@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme {
+  /* Palette GenikSuite — inspirée du look Kinésio-tool */
+  --color-genik-50:  #fff7ed;
+  --color-genik-100: #ffedd5;
+  --color-genik-200: #fed7aa;
+  --color-genik-400: #fb923c;
+  --color-genik-500: #f7931e;   /* couleur primaire (boutons) */
+  --color-genik-600: #cc7a10;
+  --color-genik-700: #9a5b0a;
+
+  /* Fond principal (beige doux, équivalent kinesio) */
+  --color-canvas:    #f7f3ec;
+  --color-canvas-elev: #ffffff;
+
+  /* Sidebar */
+  --color-sidebar:     #1b2330;
+  --color-sidebar-fg:  #cbd5e1;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-canvas);
+  color: #18181b;
+}
+
+/* Scrollbars discrètes */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 6px; }
+*::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }

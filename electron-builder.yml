@@ -1,0 +1,29 @@
+appId: com.nje.geniksuite
+productName: GenikSuite
+directories:
+  buildResources: build
+  output: dist
+files:
+  - "!**/.vscode/*"
+  - "!src/*"
+  - "!electron/*"
+  - "!{electron.vite.config.ts,drizzle.config.ts,eslint.config.mjs}"
+  - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
+  - "!{README.md,CLAUDE.md,.gitignore,.npmrc}"
+  - "out/**/*"
+asarUnpack:
+  - "**/*.{node,dll}"
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: GenikSuite
+publish:
+  provider: github
+  owner: IznogoudQc
+  repo: GenikSuite
