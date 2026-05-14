@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { invoke, IPC } from '../lib/ipc'
 import type {
+  ProjectDTO,
   TimeEntryDTO,
   ProjectBlockSummary
 } from '../shared/types'
@@ -10,6 +11,8 @@ import { WeekCalendar } from '../components/WeekCalendar'
 import { PageHeader } from '../components/PageHeader'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import { EditEntryDialog } from '../components/EditEntryDialog'
+import { ExportRangeDialog } from '../components/ExportRangeDialog'
 import { safeConfirm } from '../lib/dialogs'
 import { TIME_ENTRIES_CHANGED_EVENT } from '../App'
 
@@ -21,15 +24,19 @@ import { TIME_ENTRIES_CHANGED_EVENT } from '../App'
 export function TimesheetPage({
   timerOn,
   onToggleTimer,
-  intervalMin
+  intervalMin,
+  projects
 }: {
   timerOn: boolean
   onToggleTimer: () => void
   intervalMin: number
+  projects: ProjectDTO[]
 }) {
   const [entries, setEntries] = useState<TimeEntryDTO[]>([])
   const [summary, setSummary] = useState<ProjectBlockSummary[]>([])
   const [weekStart, setWeekStart] = useState<Date>(() => mondayOf(new Date()))
+  const [editingEntry, setEditingEntry] = useState<TimeEntryDTO | null>(null)
+  const [exportFormat, setExportFormat] = useState<'excel' | 'pdf' | null>(null)
 
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
 
@@ -55,6 +62,21 @@ export function TimesheetPage({
   async function deleteEntry(id: number) {
     if (!(await safeConfirm('Supprimer cette entrée ?'))) return
     await invoke(IPC.TimeEntryDelete, id)
+    setEditingEntry(null)
+    void refreshWeek()
+  }
+
+  async function updateEntry(updated: {
+    id: number
+    date: string
+    startTime: string
+    endTime: string
+    durationMin: number
+    projectNumber: string
+    comment: string
+  }) {
+    await invoke(IPC.TimeEntryUpdate, updated)
+    setEditingEntry(null)
     void refreshWeek()
   }
 
@@ -71,6 +93,12 @@ export function TimesheetPage({
         subtitle={`Blocs de ${intervalMin} minutes`}
         actions={
           <>
+            <Button variant="secondary" icon="📊" onClick={() => setExportFormat('excel')}>
+              Excel
+            </Button>
+            <Button variant="secondary" icon="📄" onClick={() => setExportFormat('pdf')}>
+              PDF
+            </Button>
             <Button variant="danger" icon="🗑" onClick={clearReport}>
               Effacer le compte-rendu
             </Button>
@@ -103,7 +131,7 @@ export function TimesheetPage({
         </div>
 
         {/* Vue calendaire de la semaine */}
-        <WeekCalendar weekStart={weekStart} entries={entries} />
+        <WeekCalendar weekStart={weekStart} entries={entries} onClickEntry={setEditingEntry} />
 
         {/* Compteur de blocs par projet */}
         <BlockCounter summary={summary} intervalMin={intervalMin} />
@@ -130,7 +158,11 @@ export function TimesheetPage({
                 </tr>
               )}
               {entries.map((e) => (
-                <tr key={e.id} className="border-t border-zinc-100 hover:bg-zinc-50/60">
+                <tr
+                  key={e.id}
+                  onClick={() => setEditingEntry(e)}
+                  className="border-t border-zinc-100 cursor-pointer hover:bg-zinc-50"
+                >
                   <td className="px-4 py-2.5 text-zinc-700">{e.date}</td>
                   <td className="px-4 py-2.5 text-zinc-700">{e.startTime}</td>
                   <td className="px-4 py-2.5 text-zinc-700">{e.endTime}</td>
@@ -138,7 +170,10 @@ export function TimesheetPage({
                   <td className="px-4 py-2.5 text-zinc-500">{e.comment}</td>
                   <td className="px-4 py-2.5 text-right">
                     <button
-                      onClick={() => deleteEntry(e.id)}
+                      onClick={(ev) => {
+                        ev.stopPropagation()
+                        void deleteEntry(e.id)
+                      }}
                       className="text-zinc-400 hover:text-red-500"
                       title="Supprimer"
                     >
@@ -151,6 +186,32 @@ export function TimesheetPage({
           </table>
         </Card>
       </div>
+
+      <EditEntryDialog
+        entry={editingEntry}
+        projects={projects}
+        onClose={() => setEditingEntry(null)}
+        onSave={updateEntry}
+        onDelete={(id) => {
+          void invoke(IPC.TimeEntryDelete, id)
+          setEditingEntry(null)
+          void refreshWeek()
+        }}
+      />
+
+      <ExportRangeDialog
+        open={exportFormat !== null}
+        defaultFrom={fmtDate(weekStart)}
+        defaultTo={fmtDate(weekEnd)}
+        format={exportFormat ?? 'excel'}
+        onClose={() => setExportFormat(null)}
+        onConfirm={async (from, to) => {
+          const channel =
+            exportFormat === 'excel' ? IPC.TimesheetExportExcel : IPC.TimesheetExportPdf
+          await invoke(channel, { from, to })
+          setExportFormat(null)
+        }}
+      />
     </div>
   )
 }

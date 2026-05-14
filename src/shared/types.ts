@@ -68,18 +68,30 @@ export const IPC = {
   TimeEntryDelete: 'time:delete',
   TimeEntriesClear: 'time:clear',
   TimeSummaryByProject: 'time:summary-by-project',
+  TimesheetExportExcel: 'timesheet:export-excel',
+  TimesheetExportPdf: 'timesheet:export-pdf',
   // Config
   ConfigGet: 'config:get',
   ConfigSet: 'config:set',
   // App
   AppVersion: 'app:version',
   AppRefocus: 'app:refocus',
+  ShellOpenPath: 'shell:open-path',
   // Auto-updater
   UpdaterEvent: 'updater:event',          // main → renderer (push)
   UpdaterInstallNow: 'updater:install-now' // renderer → main (action)
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
+
+// Résultat d'un export (Excel ou PDF) : ok+path si écrit, cancelled si l'utilisateur a annulé
+// la dialog native, error si la génération a échoué.
+export interface ExportResult {
+  ok: boolean
+  cancelled?: boolean
+  path?: string
+  error?: string
+}
 
 // Événements émis par electron-updater vers le renderer.
 export type UpdaterEvent =

@@ -101,6 +101,7 @@ export function App() {
               timerOn={timerOn}
               onToggleTimer={() => setTimerOn((v) => !v)}
               intervalMin={intervalMin}
+              projects={projects}
             />
           )}
           {tab === 'settings' && <SettingsPage />}

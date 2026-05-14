@@ -1,3 +1,4 @@
+import type React from 'react'
 import type { TimeEntryDTO } from '../shared/types'
 import { addDays, fmtDate } from '../lib/time'
 import { Card } from './Card'
@@ -11,10 +12,12 @@ const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
  */
 export function WeekCalendar({
   weekStart,
-  entries
+  entries,
+  onClickEntry
 }: {
   weekStart: Date
   entries: TimeEntryDTO[]
+  onClickEntry?: (entry: TimeEntryDTO) => void
 }) {
   // Regroupe les entrées par date (YYYY-MM-DD)
   const byDate = new Map<string, TimeEntryDTO[]>()
@@ -73,33 +76,65 @@ export function WeekCalendar({
                 {dayEntries.length === 0 && (
                   <div className="text-[10px] text-zinc-300 italic">—</div>
                 )}
-                {dayEntries.map((e) => (
-                  <div
-                    key={e.id}
-                    className="rounded px-1.5 py-1 text-[10px] leading-tight"
-                    style={{
-                      backgroundColor: projectColor(e.projectNumber),
-                      color: '#fff'
-                    }}
-                    title={`${e.startTime}–${e.endTime} • ${e.projectNumber}${
-                      e.comment ? ` • ${e.comment}` : ''
-                    }`}
-                  >
-                    <div className="font-semibold tabular-nums">
-                      {e.startTime}–{e.endTime}
-                    </div>
-                    <div className="truncate">{e.projectNumber || '—'}</div>
-                    {e.comment && (
-                      <div className="truncate opacity-80">{e.comment}</div>
-                    )}
-                  </div>
-                ))}
+                {dayEntries.length > 0 && (() => {
+                  // Index de la première entrée à 12h00 ou plus tard.
+                  // -1 si toutes avant midi, 0 si toutes après, sinon position d'insertion.
+                  const noonIdx = dayEntries.findIndex((e) => e.startTime >= '12:00')
+                  const items: React.ReactNode[] = []
+                  dayEntries.forEach((e, idx) => {
+                    if (noonIdx !== -1 && idx === noonIdx) {
+                      items.push(<NoonDivider key={`noon-${dateStr}`} />)
+                    }
+                    items.push(
+                      <div
+                        key={e.id}
+                        onClick={onClickEntry ? () => onClickEntry(e) : undefined}
+                        className={`rounded px-1.5 py-1 text-[10px] leading-tight ${
+                          onClickEntry ? 'cursor-pointer hover:opacity-90' : ''
+                        }`}
+                        style={{
+                          backgroundColor: projectColor(e.projectNumber),
+                          color: '#fff'
+                        }}
+                        title={`${e.startTime}–${e.endTime} • ${e.projectNumber}${
+                          e.comment ? ` • ${e.comment}` : ''
+                        }`}
+                      >
+                        <div className="font-semibold tabular-nums">
+                          {e.startTime}–{e.endTime}
+                        </div>
+                        <div className="truncate">{e.projectNumber || '—'}</div>
+                        {e.comment && (
+                          <div className="truncate opacity-80">{e.comment}</div>
+                        )}
+                      </div>
+                    )
+                  })
+                  // Toutes avant midi → séparateur en bas
+                  if (noonIdx === -1) {
+                    items.push(<NoonDivider key={`noon-${dateStr}`} />)
+                  }
+                  return items
+                })()}
               </div>
             </div>
           )
         })}
       </div>
     </Card>
+  )
+}
+
+/**
+ * Séparateur visuel "12h" entre les entrées du matin et de l'après-midi.
+ */
+function NoonDivider() {
+  return (
+    <div className="flex items-center gap-1.5 py-0.5">
+      <div className="flex-1 h-px bg-orange-200" />
+      <span className="text-[9px] text-zinc-400 tabular-nums">12h</span>
+      <div className="flex-1 h-px bg-orange-200" />
+    </div>
   )
 }
 
