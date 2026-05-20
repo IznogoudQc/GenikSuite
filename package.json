@@ -1,7 +1,7 @@
 {
   "name": "geniksuite",
   "private": true,
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "Accès rapide aux dossiers projet + feuille de temps Genik (Electron desktop)",
   "main": "out/main/index.js",
   "author": "NJE",
