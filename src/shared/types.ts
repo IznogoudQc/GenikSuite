@@ -61,6 +61,8 @@ export const IPC = {
   SubfoldersList: 'subfolders:list',
   SubfolderUpsert: 'subfolders:upsert',
   SubfolderDelete: 'subfolders:delete',
+  SubfoldersToggle: 'subfolders:toggle',
+  SubfoldersSeedDefaults: 'subfolders:seedDefaults',
   // Timesheet
   TimeEntriesList: 'time:list',
   TimeEntryAdd: 'time:add',

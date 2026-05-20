@@ -68,6 +68,16 @@ export function SettingsPage() {
     void load()
   }
 
+  async function seedGenikDefaults() {
+    await invoke(IPC.SubfoldersSeedDefaults)
+    void load()
+  }
+
+  async function toggleSubfolder(id: number, enabled: boolean) {
+    await invoke(IPC.SubfoldersToggle, { id, enabled })
+    void load()
+  }
+
   return (
     <div>
       <PageHeader title="Paramètres" subtitle="Configuration de l'application" />
@@ -124,14 +134,27 @@ export function SettingsPage() {
         </Card>
 
         <Card className="p-6">
-          <h3 className="text-sm font-semibold text-zinc-900 mb-4">Sous-dossiers ouvrables</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-zinc-900">Sous-dossiers ouvrables</h3>
+            <Button variant="secondary" onClick={seedGenikDefaults}>
+              Restaurer les sous-dossiers Genik
+            </Button>
+          </div>
 
           <div className="space-y-2 mb-4">
             {subfolders.map((s) => (
               <div
                 key={s.id}
-                className="flex items-center gap-3 px-3 py-2.5 bg-zinc-50 rounded-lg"
+                className={`flex items-center gap-3 px-3 py-2.5 bg-zinc-50 rounded-lg ${
+                  s.enabled ? '' : 'opacity-50'
+                }`}
               >
+                <input
+                  type="checkbox"
+                  checked={s.enabled}
+                  onChange={(e) => toggleSubfolder(s.id, e.target.checked)}
+                  className="h-4 w-4 rounded border-zinc-300 text-orange-600 focus:ring-orange-500/40"
+                />
                 <span className="font-medium text-zinc-800 text-sm">{s.name}</span>
                 <span className="text-zinc-500 text-xs">→ {s.relativePath}</span>
                 <button

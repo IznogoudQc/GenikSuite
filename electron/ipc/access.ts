@@ -5,6 +5,7 @@ import { eq, asc } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import { projects, subfolders, type Project } from '../../db/schema'
 import { IPC, type ProjectDTO, type SubfolderDTO } from '../../src/shared/types'
+import { GENIK_DEFAULT_SUBFOLDERS } from '../../src/shared/genikDefaults'
 import { getRootProjects } from './config'
 
 /**
@@ -198,5 +199,47 @@ export function registerAccessHandlers(
   ipcMain.handle(IPC.SubfolderDelete, async (_e, id: number): Promise<boolean> => {
     await db.delete(subfolders).where(eq(subfolders.id, id))
     return true
+  })
+
+  /**
+   * Active / désactive un sous-dossier (champ `enabled`).
+   * La AccessPage filtre sur `enabled` : un sous-dossier décoché disparaît
+   * de ses checkboxes sans être supprimé.
+   */
+  ipcMain.handle(
+    IPC.SubfoldersToggle,
+    async (_e, payload: { id: number; enabled: boolean }): Promise<boolean> => {
+      await db
+        .update(subfolders)
+        .set({ enabled: payload.enabled })
+        .where(eq(subfolders.id, payload.id))
+      return true
+    }
+  )
+
+  /**
+   * Injecte les sous-dossiers standards Genik (GENIK_DEFAULT_SUBFOLDERS).
+   * INSERT OR IGNORE basé sur `relativePath` : les sous-dossiers déjà présents
+   * (peu importe leur état `enabled`) ne sont pas touchés. Les nouveaux sont
+   * insérés désactivés (enabled=false) — l'utilisateur les active à la carte.
+   */
+  ipcMain.handle(IPC.SubfoldersSeedDefaults, async (): Promise<{ inserted: number }> => {
+    const existing = await db.select().from(subfolders)
+    const known = new Set(existing.map((s) => s.relativePath))
+    let position = existing.reduce((max, s) => Math.max(max, s.position ?? 0), -1)
+
+    let inserted = 0
+    for (const def of GENIK_DEFAULT_SUBFOLDERS) {
+      if (known.has(def.relativePath)) continue
+      position += 1
+      await db.insert(subfolders).values({
+        name: def.name,
+        relativePath: def.relativePath,
+        position,
+        enabled: false
+      })
+      inserted++
+    }
+    return { inserted }
   })
 }
