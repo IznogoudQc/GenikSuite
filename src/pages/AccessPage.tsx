@@ -111,11 +111,6 @@ export function AccessPage() {
       <PageHeader
         title="Accès projets"
         subtitle={`${projects.length} projet${projects.length > 1 ? 's' : ''}`}
-        actions={
-          <Button variant="primary" icon="📂" onClick={handleOpen}>
-            Ouvrir
-          </Button>
-        }
       />
 
       <div className="p-8 space-y-6 max-w-3xl">
@@ -162,6 +157,12 @@ export function AccessPage() {
             </Button>
             <Button variant="danger" icon="🗑" onClick={handleDelete} disabled={!selectedNumber}>
               Retirer
+            </Button>
+          </div>
+
+          <div className="pt-2">
+            <Button variant="primary" icon="📂" onClick={handleOpen}>
+              Ouvrir
             </Button>
           </div>
         </Card>
