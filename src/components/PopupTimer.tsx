@@ -179,19 +179,23 @@ export function PopupTimer({
         </div>
 
         <label className="block text-sm text-zinc-600 mb-1.5">Projet</label>
-        <select
+        <input
+          type="text"
+          list="popup-projects-list"
           value={projectNumber}
           onChange={(e) => setProjectNumber(e.target.value)}
+          placeholder="Numéro de projet (ex: 17528) ou choisir..."
           className="w-full px-3 py-2 rounded-lg border border-zinc-300 bg-white text-zinc-800 mb-4 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-        >
-          <option value="">— aucun (ignorer ce bloc) —</option>
+        />
+        <datalist id="popup-projects-list">
           {projects.map((p) => (
-            <option key={p.id} value={p.number}>
-              {p.number}
-              {p.comment ? ` — ${p.comment}` : ''}
-            </option>
+            <option
+              key={p.id}
+              value={p.number}
+              label={p.comment ? `${p.number} — ${p.comment}` : p.number}
+            />
           ))}
-        </select>
+        </datalist>
 
         <label className="block text-sm text-zinc-600 mb-1.5">Commentaire</label>
         <input

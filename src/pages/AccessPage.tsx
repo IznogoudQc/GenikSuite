@@ -5,6 +5,7 @@ import type { ProjectDTO, SubfolderDTO } from '../shared/types'
 import { PageHeader } from '../components/PageHeader'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import { PROJECTS_CHANGED_EVENT } from '../App'
 
 export function AccessPage() {
   const [projects, setProjects] = useState<ProjectDTO[]>([])
@@ -59,6 +60,7 @@ export function AccessPage() {
     // voie ce qui a été enregistré. Il sera re-synchronisé par le useEffect.
     setSelectedNumber(number)
     void refresh()
+    window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT))
   }
 
   async function handleOpen() {
@@ -94,6 +96,7 @@ export function AccessPage() {
     await invoke(IPC.ProjectDelete, selectedNumber)
     setSelectedNumber('')
     void refresh()
+    window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT))
   }
 
   function toggleSub(id: number) {

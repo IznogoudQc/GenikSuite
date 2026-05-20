@@ -14,6 +14,9 @@ type Tab = 'access' | 'timesheet' | 'settings'
 // Événement DOM émis quand une entrée de temps change : la page Timesheet l'écoute pour refresh.
 export const TIME_ENTRIES_CHANGED_EVENT = 'geniksuite:time-entries-changed'
 
+// Événement DOM émis quand la liste des projets change : App recharge `projects`.
+export const PROJECTS_CHANGED_EVENT = 'geniksuite:projects-changed'
+
 export function App() {
   const [tab, setTab] = useState<Tab>('access')
   const [version, setVersion] = useState<string>('')
@@ -37,17 +40,28 @@ export function App() {
       const v = await invoke<string>(IPC.ConfigGet, 'intervalMinutes')
       setIntervalMin(parseInt(v, 10) || 30)
     }
-    async function loadProjects() {
-      setProjects(await invoke<ProjectDTO[]>(IPC.ProjectsList))
-    }
     void loadIntervalMin()
-    void loadProjects()
     window.addEventListener(CONFIG_CHANGED_EVENT, loadIntervalMin)
     return () => window.removeEventListener(CONFIG_CHANGED_EVENT, loadIntervalMin)
   }, [])
 
+  useEffect(() => {
+    async function loadProjects() {
+      setProjects(await invoke<ProjectDTO[]>(IPC.ProjectsList))
+    }
+    void loadProjects()
+    window.addEventListener(PROJECTS_CHANGED_EVENT, loadProjects)
+    return () => window.removeEventListener(PROJECTS_CHANGED_EVENT, loadProjects)
+  }, [])
+
   // Enregistre une entrée de temps depuis le PopupTimer global.
   async function handleAddEntry(entry: NewTimeEntryDTO) {
+    const num = entry.projectNumber.trim()
+    if (num && !projects.some((p) => p.number === num)) {
+      await invoke(IPC.ProjectUpsert, { number: num })
+      // recharge la liste (couleurs du calendrier, datalist du popup) via l'event global
+      window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT))
+    }
     await invoke(IPC.TimeEntryAdd, entry)
     setPendingStart(null)
     window.dispatchEvent(new Event(TIME_ENTRIES_CHANGED_EVENT))

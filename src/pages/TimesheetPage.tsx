@@ -75,6 +75,10 @@ export function TimesheetPage({
     projectNumber: string
     comment: string
   }) {
+    const num = updated.projectNumber.trim()
+    if (num && !projects.some((p) => p.number === num)) {
+      await invoke(IPC.ProjectUpsert, { number: num })
+    }
     await invoke(IPC.TimeEntryUpdate, updated)
     setEditingEntry(null)
     void refreshWeek()

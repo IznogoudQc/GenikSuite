@@ -12,7 +12,17 @@
       "Bash(sleep 8)",
       "Bash(wc -c dev-output.log)",
       "Bash(cat dev-output.log)",
-      "Bash(powershell -NoProfile -Command \"Get-Process node,electron -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,StartTime | Format-Table -AutoSize\")"
+      "Bash(powershell -NoProfile -Command \"Get-Process node,electron -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,StartTime | Format-Table -AutoSize\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "PowerShell(Start-Process \"ms-settings:developers\")",
+      "Bash(git check-ignore *)",
+      "Bash(git stash *)",
+      "Bash(npm version *)",
+      "Bash(git checkout *)",
+      "Bash(git update-index *)",
+      "Bash(git push *)",
+      "PowerShell(git update-index *)"
     ]
   }
 }
