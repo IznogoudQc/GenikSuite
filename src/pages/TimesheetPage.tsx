@@ -14,7 +14,7 @@ import { Button } from '../components/Button'
 import { EditEntryDialog, type NewEntryDraft } from '../components/EditEntryDialog'
 import { ExportRangeDialog } from '../components/ExportRangeDialog'
 import { safeConfirm } from '../lib/dialogs'
-import { TIME_ENTRIES_CHANGED_EVENT } from '../App'
+import { TIME_ENTRIES_CHANGED_EVENT, PROJECTS_CHANGED_EVENT } from '../App'
 
 /**
  * Page Feuille de temps. Le state du timer (timerOn, pendingStart, intervalMin,
@@ -78,7 +78,10 @@ export function TimesheetPage({
   }) {
     const num = updated.projectNumber.trim()
     if (num && !projects.some((p) => p.number === num)) {
+      // Numéro libre saisi à la main : on crée le projet à la volée
+      // puis on notifie pour rafraîchir la liste partout.
       await invoke(IPC.ProjectUpsert, { number: num })
+      window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT))
     }
     await invoke(IPC.TimeEntryUpdate, updated)
     setEditingEntry(null)
@@ -107,8 +110,11 @@ export function TimesheetPage({
     comment: string
   }) {
     const num = created.projectNumber.trim()
-    if (num && num !== 'PAUSE' && !projects.some((p) => p.number === num)) {
+    if (num && !projects.some((p) => p.number === num)) {
+      // Numéro libre saisi à la main : on crée le projet à la volée
+      // puis on notifie pour rafraîchir la liste partout.
       await invoke(IPC.ProjectUpsert, { number: num })
+      window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT))
     }
     await invoke(IPC.TimeEntryAdd, created)
     setCreatingEntry(null)

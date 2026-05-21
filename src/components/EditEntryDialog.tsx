@@ -111,10 +111,6 @@ export function EditEntryDialog({
     setComment('Pause')
   }
 
-  // Permet d'afficher dans le <select> un numéro absent de la liste
-  // des projets (ex: "PAUSE", ou une entrée legacy).
-  const projectInList = !projectNumber || projects.some((p) => p.number === projectNumber)
-
   return (
     <div
       className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100]"
@@ -164,24 +160,27 @@ export function EditEntryDialog({
 
         <label className="block text-sm text-zinc-600 mb-1.5">Projet</label>
         <div className="flex gap-2 mb-3">
-          <select
+          <input
+            type="text"
+            list="edit-entry-projects-list"
             value={projectNumber}
             onChange={(e) => setProjectNumber(e.target.value)}
+            placeholder="Numéro de projet (ex: 17528) ou laisser vide"
             className="flex-1 px-3 py-2 rounded-lg border border-zinc-300 bg-white text-zinc-800 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-          >
-            <option value="">— aucun —</option>
-            {!projectInList && <option value={projectNumber}>{projectNumber}</option>}
-            {projects.map((p) => (
-              <option key={p.id} value={p.number}>
-                {p.number}
-                {p.comment ? ` — ${p.comment}` : ''}
-              </option>
-            ))}
-          </select>
+          />
           <Button variant="secondary" onClick={markAsPause}>
             Marquer comme Pause
           </Button>
         </div>
+        <datalist id="edit-entry-projects-list">
+          {projects.map((p) => (
+            <option
+              key={p.id}
+              value={p.number}
+              label={p.comment ? `${p.number} — ${p.comment}` : p.number}
+            />
+          ))}
+        </datalist>
 
         <label className="block text-sm text-zinc-600 mb-1.5">Commentaire</label>
         <input
