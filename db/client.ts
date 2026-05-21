@@ -46,6 +46,7 @@ function bootstrap(sqlite: Database.Database) {
       number TEXT NOT NULL,
       comment TEXT DEFAULT '',
       path TEXT DEFAULT '',
+      color TEXT,
       is_pinned INTEGER DEFAULT 0,
       created_at INTEGER DEFAULT (unixepoch()),
       updated_at INTEGER DEFAULT (unixepoch())
@@ -79,6 +80,25 @@ function bootstrap(sqlite: Database.Database) {
       value TEXT NOT NULL
     );
   `)
+
+  // Migrations légères pour les bases déjà créées avant l'ajout d'une colonne.
+  ensureColumn(sqlite, 'projects', 'color', 'TEXT')
+}
+
+/**
+ * Ajoute une colonne à une table existante si elle n'y est pas déjà.
+ * SQLite ne supporte pas `ADD COLUMN IF NOT EXISTS` — on vérifie via PRAGMA.
+ */
+function ensureColumn(
+  sqlite: Database.Database,
+  table: string,
+  column: string,
+  type: string
+) {
+  const cols = sqlite.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]
+  if (!cols.some((c) => c.name === column)) {
+    sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`)
+  }
 }
 
 export { schema }

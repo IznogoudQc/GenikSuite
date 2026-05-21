@@ -1,6 +1,7 @@
 import type React from 'react'
-import type { TimeEntryDTO } from '../shared/types'
+import type { ProjectDTO, TimeEntryDTO } from '../shared/types'
 import { addDays, fmtDate } from '../lib/time'
+import { colorForProject, textColorOn } from '../lib/projectColors'
 import { Card } from './Card'
 
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -13,11 +14,14 @@ const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 export function WeekCalendar({
   weekStart,
   entries,
+  projects,
   onClickEntry,
   onClickGap
 }: {
   weekStart: Date
   entries: TimeEntryDTO[]
+  /** Projets de la semaine : sert à résoudre la couleur de chaque entrée. */
+  projects: ProjectDTO[]
   onClickEntry?: (entry: TimeEntryDTO) => void
   /** Clic sur un trou entre deux entrées : ouvre la création sur [startTime → endTime]. */
   onClickGap?: (date: string, startTime: string, endTime: string) => void
@@ -88,6 +92,8 @@ export function WeekCalendar({
                     if (noonIdx !== -1 && idx === noonIdx) {
                       items.push(<NoonDivider key={`noon-${dateStr}`} />)
                     }
+                    const proj = projects.find((p) => p.number === e.projectNumber)
+                    const bg = colorForProject(proj ?? { number: e.projectNumber })
                     items.push(
                       <div
                         key={e.id}
@@ -96,8 +102,8 @@ export function WeekCalendar({
                           onClickEntry ? 'cursor-pointer hover:opacity-90' : ''
                         }`}
                         style={{
-                          backgroundColor: projectColor(e.projectNumber),
-                          color: '#fff'
+                          backgroundColor: bg,
+                          color: textColorOn(bg)
                         }}
                         title={`${e.startTime}–${e.endTime} • ${e.projectNumber}${
                           e.comment ? ` • ${e.comment}` : ''
@@ -167,29 +173,6 @@ function NoonDivider() {
       <div className="flex-1 h-px bg-orange-200" />
     </div>
   )
-}
-
-/**
- * Couleur déterministe à partir d'un numéro de projet (hash → palette).
- * Le même projet a toujours la même couleur dans toute la grille.
- */
-function projectColor(projectNumber: string): string {
-  if (!projectNumber) return '#a1a1aa' // zinc-400 pour les blocs sans projet
-  const palette = [
-    '#f97316', // orange-500
-    '#0ea5e9', // sky-500
-    '#10b981', // emerald-500
-    '#8b5cf6', // violet-500
-    '#ec4899', // pink-500
-    '#eab308', // yellow-500
-    '#14b8a6', // teal-500
-    '#f43f5e'  // rose-500
-  ]
-  let hash = 0
-  for (let i = 0; i < projectNumber.length; i++) {
-    hash = (hash * 31 + projectNumber.charCodeAt(i)) | 0
-  }
-  return palette[Math.abs(hash) % palette.length]
 }
 
 function formatDuration(min: number): string {

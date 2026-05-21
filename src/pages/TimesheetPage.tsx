@@ -169,12 +169,13 @@ export function TimesheetPage({
         <WeekCalendar
           weekStart={weekStart}
           entries={entries}
+          projects={projects}
           onClickEntry={openEdit}
           onClickGap={handleClickGap}
         />
 
         {/* Compteur de blocs par projet */}
-        <BlockCounter summary={summary} intervalMin={intervalMin} />
+        <BlockCounter summary={summary} intervalMin={intervalMin} projects={projects} />
 
         {/* Tableau d'entrées */}
         <Card className="overflow-hidden">

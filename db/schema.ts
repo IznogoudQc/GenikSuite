@@ -11,6 +11,7 @@ export const projects = sqliteTable(
     number: text('number').notNull(),            // ex: "17528"
     comment: text('comment').default(''),        // libellé court
     path: text('path').default(''),              // chemin résolu (cache)
+    color: text('color'),                        // couleur hex éditable (null = auto par hash)
     isPinned: integer('is_pinned', { mode: 'boolean' }).default(false),
     createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(unixepoch())`)

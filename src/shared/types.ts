@@ -6,6 +6,7 @@ export interface ProjectDTO {
   number: string
   comment: string
   path: string
+  color?: string       // couleur hex (#rrggbb) ; absente = auto par hash
   isPinned: boolean
 }
 
@@ -58,6 +59,7 @@ export const IPC = {
   ProjectUpsert: 'projects:upsert',
   ProjectDelete: 'projects:delete',
   ProjectOpen: 'projects:open',
+  ProjectSetColor: 'projects:setColor',
   SubfoldersList: 'subfolders:list',
   SubfolderUpsert: 'subfolders:upsert',
   SubfolderDelete: 'subfolders:delete',

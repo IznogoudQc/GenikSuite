@@ -6,6 +6,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import { projects, subfolders, type Project } from '../../db/schema'
 import { IPC, type ProjectDTO, type SubfolderDTO } from '../../src/shared/types'
 import { GENIK_DEFAULT_SUBFOLDERS } from '../../src/shared/genikDefaults'
+import { colorForProject } from '../../src/lib/projectColors'
 import { getRootProjects } from './config'
 
 /**
@@ -40,6 +41,9 @@ function toDTO(p: Project): ProjectDTO {
     number: p.number,
     comment: p.comment ?? '',
     path: p.path ?? '',
+    // color est toujours résolu : couleur custom si définie, sinon couleur
+    // déterministe par hash du numéro — pour avoir la même couleur partout.
+    color: colorForProject({ number: p.number, color: p.color }),
     isPinned: !!p.isPinned
   }
 }
@@ -129,6 +133,21 @@ export function registerAccessHandlers(
     await db.delete(projects).where(eq(projects.number, projectNumber))
     return true
   })
+
+  /**
+   * Définit la couleur custom d'un projet. `color` est une chaîne hex (#rrggbb).
+   * ProjectUpsert ne touche jamais à `color` : la couleur survit aux mises à jour.
+   */
+  ipcMain.handle(
+    IPC.ProjectSetColor,
+    async (_e, payload: { number: string; color: string }): Promise<boolean> => {
+      await db
+        .update(projects)
+        .set({ color: payload.color, updatedAt: new Date() })
+        .where(eq(projects.number, payload.number))
+      return true
+    }
+  )
 
   /**
    * Ouvre le dossier projet (ou un sous-dossier) dans l'Explorateur Windows.
