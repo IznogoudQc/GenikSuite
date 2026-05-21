@@ -11,7 +11,7 @@ import { WeekCalendar } from '../components/WeekCalendar'
 import { PageHeader } from '../components/PageHeader'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
-import { EditEntryDialog } from '../components/EditEntryDialog'
+import { EditEntryDialog, type NewEntryDraft } from '../components/EditEntryDialog'
 import { ExportRangeDialog } from '../components/ExportRangeDialog'
 import { safeConfirm } from '../lib/dialogs'
 import { TIME_ENTRIES_CHANGED_EVENT } from '../App'
@@ -36,6 +36,7 @@ export function TimesheetPage({
   const [summary, setSummary] = useState<ProjectBlockSummary[]>([])
   const [weekStart, setWeekStart] = useState<Date>(() => mondayOf(new Date()))
   const [editingEntry, setEditingEntry] = useState<TimeEntryDTO | null>(null)
+  const [creatingEntry, setCreatingEntry] = useState<NewEntryDraft | null>(null)
   const [exportFormat, setExportFormat] = useState<'excel' | 'pdf' | null>(null)
 
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
@@ -81,6 +82,36 @@ export function TimesheetPage({
     }
     await invoke(IPC.TimeEntryUpdate, updated)
     setEditingEntry(null)
+    void refreshWeek()
+  }
+
+  // Ouvre le dialog en mode édition (clic sur une entrée existante).
+  function openEdit(entry: TimeEntryDTO) {
+    setCreatingEntry(null)
+    setEditingEntry(entry)
+  }
+
+  // Clic sur un trou du calendrier → ouvre le dialog en mode création,
+  // pré-rempli sur la plage [startTime → endTime] du trou.
+  function handleClickGap(date: string, startTime: string, endTime: string) {
+    setEditingEntry(null)
+    setCreatingEntry({ date, startTime, endTime })
+  }
+
+  async function createEntry(created: {
+    date: string
+    startTime: string
+    endTime: string
+    durationMin: number
+    projectNumber: string
+    comment: string
+  }) {
+    const num = created.projectNumber.trim()
+    if (num && num !== 'PAUSE' && !projects.some((p) => p.number === num)) {
+      await invoke(IPC.ProjectUpsert, { number: num })
+    }
+    await invoke(IPC.TimeEntryAdd, created)
+    setCreatingEntry(null)
     void refreshWeek()
   }
 
@@ -135,7 +166,12 @@ export function TimesheetPage({
         </div>
 
         {/* Vue calendaire de la semaine */}
-        <WeekCalendar weekStart={weekStart} entries={entries} onClickEntry={setEditingEntry} />
+        <WeekCalendar
+          weekStart={weekStart}
+          entries={entries}
+          onClickEntry={openEdit}
+          onClickGap={handleClickGap}
+        />
 
         {/* Compteur de blocs par projet */}
         <BlockCounter summary={summary} intervalMin={intervalMin} />
@@ -164,7 +200,7 @@ export function TimesheetPage({
               {entries.map((e) => (
                 <tr
                   key={e.id}
-                  onClick={() => setEditingEntry(e)}
+                  onClick={() => openEdit(e)}
                   className="border-t border-zinc-100 cursor-pointer hover:bg-zinc-50"
                 >
                   <td className="px-4 py-2.5 text-zinc-700">{e.date}</td>
@@ -193,9 +229,15 @@ export function TimesheetPage({
 
       <EditEntryDialog
         entry={editingEntry}
+        mode={creatingEntry ? 'create' : 'edit'}
+        initialEntry={creatingEntry}
         projects={projects}
-        onClose={() => setEditingEntry(null)}
+        onClose={() => {
+          setEditingEntry(null)
+          setCreatingEntry(null)
+        }}
         onSave={updateEntry}
+        onCreate={createEntry}
         onDelete={(id) => {
           void invoke(IPC.TimeEntryDelete, id)
           setEditingEntry(null)

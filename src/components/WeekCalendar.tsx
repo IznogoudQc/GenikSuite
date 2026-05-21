@@ -13,11 +13,14 @@ const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 export function WeekCalendar({
   weekStart,
   entries,
-  onClickEntry
+  onClickEntry,
+  onClickGap
 }: {
   weekStart: Date
   entries: TimeEntryDTO[]
   onClickEntry?: (entry: TimeEntryDTO) => void
+  /** Clic sur un trou entre deux entrées : ouvre la création sur [startTime → endTime]. */
+  onClickGap?: (date: string, startTime: string, endTime: string) => void
 }) {
   // Regroupe les entrées par date (YYYY-MM-DD)
   const byDate = new Map<string, TimeEntryDTO[]>()
@@ -109,6 +112,34 @@ export function WeekCalendar({
                         )}
                       </div>
                     )
+                    // Trou entre cette entrée et la suivante (même jour) :
+                    // endTime de l'entrée courante < startTime de la suivante.
+                    const next = dayEntries[idx + 1]
+                    if (next && e.endTime < next.startTime) {
+                      const gapStart = e.endTime
+                      const gapEnd = next.startTime
+                      items.push(
+                        <div
+                          key={`gap-${e.id}`}
+                          onClick={
+                            onClickGap
+                              ? () => onClickGap(dateStr, gapStart, gapEnd)
+                              : undefined
+                          }
+                          className={`rounded px-1.5 py-1 text-center border border-dashed border-zinc-300 bg-zinc-100 ${
+                            onClickGap ? 'cursor-pointer hover:bg-zinc-200' : ''
+                          }`}
+                          title={`Trou ${gapStart}–${gapEnd}`}
+                        >
+                          <div className="text-xs text-zinc-500 leading-tight">
+                            + Ajouter
+                          </div>
+                          <div className="text-[10px] text-zinc-400 tabular-nums leading-tight">
+                            {gapStart}–{gapEnd}
+                          </div>
+                        </div>
+                      )
+                    }
                   })
                   // Toutes avant midi → séparateur en bas
                   if (noonIdx === -1) {
