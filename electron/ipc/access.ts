@@ -1,10 +1,10 @@
-import { shell, type IpcMain } from 'electron'
+import { shell, dialog, BrowserWindow, type IpcMain } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { eq, asc } from 'drizzle-orm'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import { projects, subfolders, type Project } from '../../db/schema'
-import { IPC, type ProjectDTO, type SubfolderDTO } from '../../src/shared/types'
+import { IPC, type ProjectDTO, type SubfolderDTO, type ImportLegacyResult } from '../../src/shared/types'
 import { GENIK_DEFAULT_SUBFOLDERS } from '../../src/shared/genikDefaults'
 import { colorForProject } from '../../src/lib/projectColors'
 import { getRootProjects } from './config'
@@ -233,6 +233,96 @@ export function registerAccessHandlers(
         .set({ enabled: payload.enabled })
         .where(eq(subfolders.id, payload.id))
       return true
+    }
+  )
+
+  /**
+   * Importe un fichier `projets.json` legacy (format GenikAccess Python) :
+   * `{ "17528": { "path": "...", "comment": "..." }, ... }`.
+   * Ouvre un dialog si `filePath` n'est pas fourni.
+   * Insère les nouveaux projets, met à jour `comment`/`path` des existants
+   * (laisse `color` et `isPinned` intacts).
+   */
+  ipcMain.handle(
+    IPC.ProjectsImportLegacy,
+    async (_e, payload?: { filePath?: string }): Promise<ImportLegacyResult> => {
+      let filePath = payload?.filePath
+      if (!filePath) {
+        const parent = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+        const result = parent
+          ? await dialog.showOpenDialog(parent, {
+              title: 'Sélectionne projets.json (GenikAccess)',
+              properties: ['openFile'],
+              filters: [{ name: 'JSON', extensions: ['json'] }]
+            })
+          : await dialog.showOpenDialog({
+              title: 'Sélectionne projets.json (GenikAccess)',
+              properties: ['openFile'],
+              filters: [{ name: 'JSON', extensions: ['json'] }]
+            })
+        if (result.canceled || !result.filePaths[0]) return { ok: false, cancelled: true }
+        filePath = result.filePaths[0]
+      }
+
+      let raw: unknown
+      try {
+        raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+      } catch (err) {
+        return { ok: false, path: filePath, error: `Lecture/parse JSON: ${(err as Error).message}` }
+      }
+
+      // Format attendu : objet { "<number>": { path, comment } }.
+      // On accepte aussi un tableau de strings (vieux ChronoTrack).
+      const entries: Array<{ number: string; comment: string; path: string }> = []
+      if (Array.isArray(raw)) {
+        for (const item of raw) {
+          const num = String(item).trim()
+          if (num) entries.push({ number: num, comment: '', path: '' })
+        }
+      } else if (raw && typeof raw === 'object') {
+        for (const [num, info] of Object.entries(raw as Record<string, { path?: string; comment?: string }>)) {
+          const n = String(num).trim()
+          if (!n) continue
+          entries.push({
+            number: n,
+            comment: info?.comment ?? '',
+            path: info?.path ?? ''
+          })
+        }
+      } else {
+        return { ok: false, path: filePath, error: 'Format JSON inattendu.' }
+      }
+
+      let inserted = 0
+      let updated = 0
+      for (const e of entries) {
+        const existing = await db
+          .select()
+          .from(projects)
+          .where(eq(projects.number, e.number))
+          .limit(1)
+
+        if (existing[0]) {
+          await db
+            .update(projects)
+            .set({
+              comment: e.comment || existing[0].comment,
+              path: e.path || existing[0].path,
+              updatedAt: new Date()
+            })
+            .where(eq(projects.id, existing[0].id))
+          updated++
+        } else {
+          await db.insert(projects).values({
+            number: e.number,
+            comment: e.comment,
+            path: e.path
+          })
+          inserted++
+        }
+      }
+
+      return { ok: true, path: filePath, inserted, updated, total: entries.length }
     }
   )
 

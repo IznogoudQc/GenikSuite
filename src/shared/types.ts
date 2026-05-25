@@ -60,6 +60,7 @@ export const IPC = {
   ProjectDelete: 'projects:delete',
   ProjectOpen: 'projects:open',
   ProjectSetColor: 'projects:setColor',
+  ProjectsImportLegacy: 'projects:importLegacy',
   SubfoldersList: 'subfolders:list',
   SubfolderUpsert: 'subfolders:upsert',
   SubfolderDelete: 'subfolders:delete',
@@ -95,6 +96,19 @@ export interface ExportResult {
   cancelled?: boolean
   path?: string
   error?: string
+}
+
+// Résultat d'un import de projets.json (legacy GenikAccess).
+// `cancelled` si l'utilisateur a fermé la dialog ; `error` si parse impossible ;
+// sinon `inserted` / `updated` / `total` reflètent ce qui a été appliqué.
+export interface ImportLegacyResult {
+  ok: boolean
+  cancelled?: boolean
+  error?: string
+  path?: string
+  inserted?: number
+  updated?: number
+  total?: number
 }
 
 // Événements émis par electron-updater vers le renderer.

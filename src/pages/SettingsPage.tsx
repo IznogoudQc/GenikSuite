@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { invoke, IPC, CONFIG_CHANGED_EVENT } from '../lib/ipc'
 import { safeConfirm } from '../lib/dialogs'
-import type { SubfolderDTO } from '../shared/types'
+import type { SubfolderDTO, ImportLegacyResult } from '../shared/types'
 import { PageHeader } from '../components/PageHeader'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import { PROJECTS_CHANGED_EVENT } from '../App'
 
 export function SettingsPage() {
   const [rootProjects, setRootProjects] = useState('')
@@ -78,6 +79,18 @@ export function SettingsPage() {
     void load()
   }
 
+  async function importLegacyProjects() {
+    const r = await invoke<ImportLegacyResult>(IPC.ProjectsImportLegacy)
+    if (r.cancelled) return
+    if (!r.ok) {
+      setStatus(`Import échoué : ${r.error ?? 'erreur inconnue'}`)
+      return
+    }
+    setStatus(`Import OK : ${r.inserted} nouveau(x), ${r.updated} mis à jour (${r.total} total).`)
+    window.dispatchEvent(new Event(PROJECTS_CHANGED_EVENT))
+    setTimeout(() => setStatus(''), 5000)
+  }
+
   return (
     <div>
       <PageHeader title="Paramètres" subtitle="Configuration de l'application" />
@@ -130,6 +143,20 @@ export function SettingsPage() {
               Enregistrer
             </Button>
             {status && <span className="text-sm text-zinc-600">{status}</span>}
+          </div>
+        </Card>
+
+        <Card className="p-6 space-y-3">
+          <h3 className="text-sm font-semibold text-zinc-900">Import / Migration</h3>
+          <p className="text-sm text-zinc-600">
+            Importe un ancien fichier <code className="px-1 py-0.5 bg-zinc-100 rounded text-xs">projets.json</code> de
+            GenikAccess (Python). Les projets existants sont mis à jour (commentaire / chemin),
+            les nouveaux sont ajoutés. Les couleurs et favoris ne sont pas écrasés.
+          </p>
+          <div>
+            <Button variant="secondary" icon="📥" onClick={importLegacyProjects}>
+              Importer projets.json (GenikAccess)
+            </Button>
           </div>
         </Card>
 
