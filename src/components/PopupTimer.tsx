@@ -108,6 +108,8 @@ export function PopupTimer({
         setStartStr(fmtTime(start))
         setEndStr(fmtTime(end))
         setOpen(true)
+        // Force la fenêtre au premier plan (par-dessus SolidWorks, Excel, etc.)
+        void invoke(IPC.AppBringToFront)
         if (soundEnabledRef.current) playPopupBeep()
         schedule()
       }, delay)

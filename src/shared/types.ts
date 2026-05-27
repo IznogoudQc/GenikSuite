@@ -82,6 +82,7 @@ export const IPC = {
   AppVersion: 'app:version',
   AppRefocus: 'app:refocus',
   ShellOpenPath: 'shell:open-path',
+  AppBringToFront: 'app:bring-to-front',
   // Auto-updater
   UpdaterEvent: 'updater:event',          // main → renderer (push)
   UpdaterInstallNow: 'updater:install-now' // renderer → main (action)

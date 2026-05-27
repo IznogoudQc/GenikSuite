@@ -124,6 +124,24 @@ app.whenReady().then(() => {
     mainWindow.webContents.focus()
   })
 
+  // Place la fenêtre par-dessus TOUTES les apps (SolidWorks, Excel, etc.)
+  // puis relâche le flag après un court délai. Utilisé par le PopupTimer
+  // pour interrompre l'utilisateur à chaque bloc de temps.
+  ipcMain.handle(IPC.AppBringToFront, () => {
+    if (!mainWindow) return
+    // Restaurer si minimisée
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.setAlwaysOnTop(true)
+    mainWindow.show()
+    mainWindow.focus()
+    mainWindow.webContents.focus()
+    // Relâche après 500ms : la fenêtre reste visible mais ne bloque plus
+    // le passage en arrière-plan si l'utilisateur bascule vers une autre app.
+    setTimeout(() => {
+      mainWindow?.setAlwaysOnTop(false)
+    }, 500)
+  })
+
   createWindow()
   setupAutoUpdater()
 
