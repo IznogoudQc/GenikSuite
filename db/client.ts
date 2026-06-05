@@ -79,6 +79,19 @@ function bootstrap(sqlite: Database.Database) {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS network_profiles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      interface_name TEXT NOT NULL,
+      ip TEXT NOT NULL,
+      subnet TEXT NOT NULL,
+      gateway TEXT DEFAULT '',
+      position INTEGER DEFAULT 0,
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS network_profiles_name_idx ON network_profiles(name);
   `)
 
   // Migrations légères pour les bases déjà créées avant l'ajout d'une colonne.

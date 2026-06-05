@@ -63,6 +63,28 @@ export const config = sqliteTable('config', {
   value: text('value').notNull()
 })
 
+// ---------------------------------------------------------------------------
+// Table `network_profiles` — profils IP statique (Manage_ip)
+// Chaque profil = un preset (nom, interface, IP, masque) appliqué via netsh.
+// ---------------------------------------------------------------------------
+export const networkProfiles = sqliteTable(
+  'network_profiles',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),                  // ex: "Camera_Atelier"
+    interfaceName: text('interface_name').notNull(),// ex: "Ethernet2"
+    ip: text('ip').notNull(),                      // ex: "192.168.0.50"
+    subnet: text('subnet').notNull(),              // ex: "255.255.255.0"
+    gateway: text('gateway').default(''),          // optionnel
+    position: integer('position').default(0),
+    createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(unixepoch())`)
+  },
+  (t) => ({
+    nameIdx: uniqueIndex('network_profiles_name_idx').on(t.name)
+  })
+)
+
 // Types inférés pour TypeScript
 export type Project = typeof projects.$inferSelect
 export type NewProject = typeof projects.$inferInsert
@@ -70,3 +92,5 @@ export type Subfolder = typeof subfolders.$inferSelect
 export type NewSubfolder = typeof subfolders.$inferInsert
 export type TimeEntry = typeof timeEntries.$inferSelect
 export type NewTimeEntry = typeof timeEntries.$inferInsert
+export type NetworkProfile = typeof networkProfiles.$inferSelect
+export type NewNetworkProfile = typeof networkProfiles.$inferInsert

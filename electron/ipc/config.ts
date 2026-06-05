@@ -9,7 +9,10 @@ const DEFAULTS: Record<string, string> = {
   intervalMinutes: '30',
   startHour: '8',
   startMinute: '0',
-  soundEnabled: 'true'
+  soundEnabled: 'true',
+  // Nom de la carte réseau Windows utilisée pour les profils IP statique.
+  // Varie d'un PC à l'autre ("Ethernet", "Ethernet 2", "Wi-Fi"...).
+  networkInterface: 'Ethernet'
 }
 
 export async function getConfigValue(

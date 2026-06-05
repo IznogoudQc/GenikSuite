@@ -51,6 +51,33 @@ export interface AppConfig {
   startMinute: number
 }
 
+// Profil IP statique (Manage_ip) — appliqué via netsh quand on clique « Appliquer ».
+export interface NetworkProfileDTO {
+  id: number
+  name: string
+  interfaceName: string
+  ip: string
+  subnet: string
+  gateway: string
+  position: number
+}
+
+// Interface réseau Windows telle que vue par `netsh interface show interface`.
+export interface NetworkInterfaceDTO {
+  name: string                 // ex: "Ethernet", "Ethernet2"
+  state: string                // "Connected" / "Disconnected"
+  type: string                 // "Dedicated"
+  currentIp?: string           // IP actuellement assignée (peut être vide)
+  mode?: 'dhcp' | 'static' | 'unknown'
+}
+
+// Résultat d'une action netsh (apply / dhcp).
+export interface NetshResult {
+  ok: boolean
+  message?: string
+  newIp?: string               // IP relue après application
+}
+
 // Canal IPC : noms centralisés pour éviter les fautes de frappe.
 export const IPC = {
   // Access
@@ -75,6 +102,14 @@ export const IPC = {
   TimeSummaryByProject: 'time:summary-by-project',
   TimesheetExportExcel: 'timesheet:export-excel',
   TimesheetExportPdf: 'timesheet:export-pdf',
+  // Network (gestion IP statique cartes réseau Windows — ex Manage_ip)
+  NetworkProfilesList: 'network:profiles-list',
+  NetworkProfileUpsert: 'network:profile-upsert',
+  NetworkProfileDelete: 'network:profile-delete',
+  NetworkInterfacesList: 'network:interfaces-list',
+  NetworkApplyProfile: 'network:apply-profile',
+  NetworkSetDhcp: 'network:set-dhcp',
+  NetworkImportLegacyIni: 'network:import-legacy-ini',
   // Config
   ConfigGet: 'config:get',
   ConfigSet: 'config:set',
