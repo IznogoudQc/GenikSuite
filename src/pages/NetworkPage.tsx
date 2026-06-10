@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { invoke, IPC, CONFIG_CHANGED_EVENT } from '../lib/ipc'
 import { safeConfirm } from '../lib/dialogs'
 import type {
@@ -28,6 +28,11 @@ export function NetworkPage() {
   const [editing, setEditing] = useState<NetworkProfileDTO | null>(null)
   const [isNew, setIsNew] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [ifaceSaved, setIfaceSaved] = useState(false)
+  // Timer pour debouncer la sauvegarde du nom d'interface pendant la frappe.
+  const saveDebounce = useRef<number | null>(null)
+  // Trace la dernière valeur sauvegardée pour éviter d'écrire à l'identique.
+  const lastSavedRef = useRef<string>('')
 
   // Interface filtrée : on n'affiche QUE celle configurée.
   const interfaces = configuredIface
@@ -55,6 +60,7 @@ export function NetworkPage() {
     setProfiles(ps)
     setAllInterfaces(ifs)
     setConfiguredIface(iface)
+    lastSavedRef.current = iface
     setRefreshing(false)
   }
 
@@ -74,11 +80,52 @@ export function NetworkPage() {
     void refresh()
   }
 
-  async function changeInterface(name: string) {
-    await invoke(IPC.ConfigSet, { key: 'networkInterface', value: name })
+  /**
+   * Sauvegarde immédiate du nom d'interface en base. Idempotent (no-op si
+   * identique à la dernière valeur écrite). Affiche un petit « ✓ enregistré ».
+   */
+  async function persistInterface(name: string) {
+    const trimmed = name.trim()
+    if (trimmed === lastSavedRef.current) return
+    await invoke(IPC.ConfigSet, { key: 'networkInterface', value: trimmed })
+    lastSavedRef.current = trimmed
+    setIfaceSaved(true)
+    setTimeout(() => setIfaceSaved(false), 1500)
+  }
+
+  /**
+   * Appelé à chaque keystroke : met à jour l'état local immédiatement,
+   * et déclenche une sauvegarde DB debouncée (500ms après la dernière frappe).
+   */
+  function handleIfaceChange(name: string) {
     setConfiguredIface(name)
+    if (saveDebounce.current) window.clearTimeout(saveDebounce.current)
+    saveDebounce.current = window.setTimeout(() => {
+      void persistInterface(name)
+    }, 500)
+  }
+
+  /** Force la sauvegarde immédiate (sur Enter ou blur). */
+  function handleIfaceCommit(name: string) {
+    if (saveDebounce.current) {
+      window.clearTimeout(saveDebounce.current)
+      saveDebounce.current = null
+    }
+    void persistInterface(name)
     void refresh()
   }
+
+  // Cleanup du timer si le composant se démonte avant la sauvegarde.
+  useEffect(() => {
+    return () => {
+      if (saveDebounce.current) {
+        // Sauvegarde finale au démontage : évite de perdre une frappe en cours.
+        window.clearTimeout(saveDebounce.current)
+        void persistInterface(configuredIface)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function deleteProfile(p: NetworkProfileDTO) {
     if (!(await safeConfirm(`Supprimer le profil « ${p.name} » ?`))) return
@@ -157,8 +204,11 @@ export function NetworkPage() {
             <input
               list="iface-list-top"
               value={configuredIface}
-              onChange={(e) => setConfiguredIface(e.target.value)}
-              onBlur={(e) => changeInterface(e.target.value.trim())}
+              onChange={(e) => handleIfaceChange(e.target.value)}
+              onBlur={(e) => handleIfaceCommit(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleIfaceCommit((e.target as HTMLInputElement).value)
+              }}
               placeholder="ex: Ethernet 2"
               className="w-64 px-3 py-2 rounded-lg border border-zinc-300 bg-white text-zinc-800 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
             />
@@ -167,6 +217,7 @@ export function NetworkPage() {
                 <option key={i.name} value={i.name} />
               ))}
             </datalist>
+            {ifaceSaved && <span className="text-xs text-green-600">✓ enregistré</span>}
             <span className="text-xs text-zinc-500">
               Modifiable par PC. Le nom varie d'un poste à l'autre.
             </span>
