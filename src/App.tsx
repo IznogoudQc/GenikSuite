@@ -3,6 +3,7 @@ import { AccessPage } from './pages/AccessPage'
 import { TimesheetPage } from './pages/TimesheetPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { NetworkPage } from './pages/NetworkPage'
+import { DocumentsPage } from './pages/DocumentsPage'
 import { UpdateBanner } from './components/UpdateBanner'
 import { StatusBar } from './components/StatusBar'
 import { PopupTimer } from './components/PopupTimer'
@@ -10,7 +11,7 @@ import { ConfirmHost } from './components/ConfirmHost'
 import { invoke, IPC, CONFIG_CHANGED_EVENT } from './lib/ipc'
 import type { ProjectDTO, NewTimeEntryDTO } from './shared/types'
 
-type Tab = 'access' | 'timesheet' | 'network' | 'settings'
+type Tab = 'access' | 'timesheet' | 'network' | 'documents' | 'settings'
 
 // Événement DOM émis quand une entrée de temps change : la page Timesheet l'écoute pour refresh.
 export const TIME_ENTRIES_CHANGED_EVENT = 'geniksuite:time-entries-changed'
@@ -101,6 +102,12 @@ export function App() {
               label="Réseau"
               icon="🌐"
             />
+            <SideIcon
+              active={tab === 'documents'}
+              onClick={() => setTab('documents')}
+              label="Documents"
+              icon="📚"
+            />
           </nav>
 
           <SideIcon
@@ -126,6 +133,7 @@ export function App() {
             />
           )}
           {tab === 'network' && <NetworkPage />}
+          {tab === 'documents' && <DocumentsPage />}
           {tab === 'settings' && <SettingsPage />}
         </main>
       </div>

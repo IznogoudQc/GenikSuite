@@ -85,6 +85,38 @@ export const networkProfiles = sqliteTable(
   })
 )
 
+// ---------------------------------------------------------------------------
+// Table `document_groups` — catégories configurables (Normes, Templates, …).
+// ---------------------------------------------------------------------------
+export const documentGroups = sqliteTable('document_groups', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),                 // ex: "Normes ISO"
+  position: integer('position').default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`)
+})
+
+// ---------------------------------------------------------------------------
+// Table `documents` — raccourcis vers des documents (normes ISO, manuels, etc.)
+// Cliquer ouvre le fichier avec l'app Windows par défaut (shell.openPath).
+// `groupId` null = section "Non classé".
+// ---------------------------------------------------------------------------
+export const documents = sqliteTable('documents', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),                 // ex: "Norme ISO 14120"
+  // Chemin absolu (ex: "P:\\Docs\\ISO_14120.pdf") OU relatif au projet
+  // (ex: "06_Tests\\Rapport_PV.docx") selon `isProjectRelative`.
+  filePath: text('file_path').notNull(),
+  comment: text('comment').default(''),         // description courte
+  // Si true, `filePath` est résolu via le numéro de projet actif :
+  // P:\<tranche>\<projet>\<filePath>. Le doc apparaît dans la carte
+  // "Documents du projet" sur la page Accès quand un projet est sélectionné.
+  isProjectRelative: integer('is_project_relative', { mode: 'boolean' }).default(false),
+  groupId: integer('group_id').references(() => documentGroups.id, { onDelete: 'set null' }),
+  position: integer('position').default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(unixepoch())`)
+})
+
 // Types inférés pour TypeScript
 export type Project = typeof projects.$inferSelect
 export type NewProject = typeof projects.$inferInsert
@@ -94,3 +126,7 @@ export type TimeEntry = typeof timeEntries.$inferSelect
 export type NewTimeEntry = typeof timeEntries.$inferInsert
 export type NetworkProfile = typeof networkProfiles.$inferSelect
 export type NewNetworkProfile = typeof networkProfiles.$inferInsert
+export type Document = typeof documents.$inferSelect
+export type NewDocument = typeof documents.$inferInsert
+export type DocumentGroup = typeof documentGroups.$inferSelect
+export type NewDocumentGroup = typeof documentGroups.$inferInsert

@@ -51,6 +51,34 @@ export interface AppConfig {
   startMinute: number
 }
 
+// Groupe configurable de documents (ex: "Normes ISO", "Templates", "Gestion").
+export interface DocumentGroupDTO {
+  id: number
+  name: string
+  position: number
+}
+
+// Raccourci vers un document (norme ISO, manuel, fiche…). Cliquer ouvre le
+// fichier via shell.openPath (app Windows par défaut : Acrobat, Word, etc.).
+// `groupId` null = section "Non classé".
+export interface DocumentDTO {
+  id: number
+  name: string
+  /** Chemin absolu, ou relatif au dossier projet si `isProjectRelative` est true. */
+  filePath: string
+  comment: string
+  /** Si true, filePath est concaténé au dossier du projet actif au moment d'ouvrir. */
+  isProjectRelative: boolean
+  groupId: number | null
+  position: number
+}
+
+// Document résolu pour un projet donné : retourné par DocumentsListForProject.
+// Ne contient que les docs dont le chemin résolu existe réellement sur disque.
+export interface ResolvedDocumentDTO extends DocumentDTO {
+  resolvedPath: string         // chemin absolu effectif (P:\<tranche>\<projet>\…)
+}
+
 // Profil IP statique (Manage_ip) — appliqué via netsh quand on clique « Appliquer ».
 export interface NetworkProfileDTO {
   id: number
@@ -110,6 +138,16 @@ export const IPC = {
   NetworkApplyProfile: 'network:apply-profile',
   NetworkSetDhcp: 'network:set-dhcp',
   NetworkImportLegacyIni: 'network:import-legacy-ini',
+  // Documents (raccourcis vers fichiers : normes ISO, manuels, etc.)
+  DocumentsList: 'documents:list',
+  DocumentUpsert: 'documents:upsert',
+  DocumentDelete: 'documents:delete',
+  DocumentOpen: 'documents:open',
+  DocumentPickFile: 'documents:pick-file',
+  DocumentGroupsList: 'documents:groups-list',
+  DocumentGroupUpsert: 'documents:group-upsert',
+  DocumentGroupDelete: 'documents:group-delete',
+  DocumentsListForProject: 'documents:list-for-project',
   // Config
   ConfigGet: 'config:get',
   ConfigSet: 'config:set',

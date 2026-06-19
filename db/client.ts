@@ -92,10 +92,33 @@ function bootstrap(sqlite: Database.Database) {
       updated_at INTEGER DEFAULT (unixepoch())
     );
     CREATE UNIQUE INDEX IF NOT EXISTS network_profiles_name_idx ON network_profiles(name);
+
+    CREATE TABLE IF NOT EXISTS document_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      position INTEGER DEFAULT 0,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+
+    CREATE TABLE IF NOT EXISTS documents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      comment TEXT DEFAULT '',
+      is_project_relative INTEGER DEFAULT 0,
+      group_id INTEGER REFERENCES document_groups(id) ON DELETE SET NULL,
+      position INTEGER DEFAULT 0,
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
   `)
 
   // Migrations légères pour les bases déjà créées avant l'ajout d'une colonne.
   ensureColumn(sqlite, 'projects', 'color', 'TEXT')
+  // Ajout de group_id sur documents existant (déployé sans groupes initialement).
+  ensureColumn(sqlite, 'documents', 'group_id', 'INTEGER REFERENCES document_groups(id) ON DELETE SET NULL')
+  // Ajout du flag is_project_relative (doc résolu via le projet actif).
+  ensureColumn(sqlite, 'documents', 'is_project_relative', 'INTEGER DEFAULT 0')
 }
 
 /**
