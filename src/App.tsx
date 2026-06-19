@@ -97,12 +97,6 @@ export function App() {
               icon="⏱"
             />
             <SideIcon
-              active={tab === 'network'}
-              onClick={() => setTab('network')}
-              label="Réseau"
-              icon="🌐"
-            />
-            <SideIcon
               active={tab === 'documents'}
               onClick={() => setTab('documents')}
               label="Documents"
@@ -110,6 +104,12 @@ export function App() {
             />
           </nav>
 
+          <SideIcon
+            active={tab === 'network'}
+            onClick={() => setTab('network')}
+            label="Réseau"
+            icon="🌐"
+          />
           <SideIcon
             active={tab === 'settings'}
             onClick={() => setTab('settings')}
