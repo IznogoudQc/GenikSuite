@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import logoUrl from './assets/logo.png'
 import { AccessPage } from './pages/AccessPage'
 import { TimesheetPage } from './pages/TimesheetPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -79,9 +80,11 @@ export function App() {
           style={{ backgroundColor: 'var(--color-sidebar)', color: 'var(--color-sidebar-fg)' }}
         >
           {/* Logo / brand */}
-          <div className="mb-6 w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
-            v2
-          </div>
+          <img
+            src={logoUrl}
+            alt="GenikSuite"
+            className="mb-6 w-10 h-10 rounded-lg shadow-md object-cover"
+          />
 
           <nav className="flex flex-col gap-2 flex-1">
             <SideIcon
