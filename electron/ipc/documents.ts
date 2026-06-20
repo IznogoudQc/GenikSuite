@@ -56,15 +56,13 @@ function resolveProjectDir(root: string, projectNumber: string): string | null {
  *   - le numéro projet → {PROJECT}
  *   - les dates ISO (YYYY-MM-DD ou YYYY_MM_DD) → *
  *   - les versions vN ou _vN → *
- * Préserve la structure de dossiers d'origine pour cibler le scan.
+ * Préserve la structure de dossiers d'origine (pas de wildcard sur les dossiers)
+ * pour que le scan soit instantané — un seul dossier ciblé, pas de récursion.
  */
 function makePattern(subPath: string, projectNumber: string): string {
   let out = subPath
-  // Remplace toutes les occurrences du numéro projet par {PROJECT}.
   out = out.replace(new RegExp(`\\b${projectNumber}\\b`, 'g'), '{PROJECT}')
-  // Dates ISO : 2026-02-24, 2026_02_24
   out = out.replace(/\d{4}[-_]\d{2}[-_]\d{2}/g, '*')
-  // Versions v1, v12, _v3
   out = out.replace(/v\d+/gi, '*')
   return out
 }
@@ -94,13 +92,13 @@ function patternToRegex(pattern: string): RegExp {
 
 /**
  * Cherche dans un dossier précis (PAS récursif) les fichiers dont le NOM
- * matche le pattern de fichier. Le pattern complet a la forme :
+ * matche le pattern. Le pattern complet a la forme :
  *   `<sous-dossier>\<nom-de-fichier>` (ex: `02_Planif\{PROJECT}_Addendas - *.xlsx`)
- * On extrait le sous-dossier (partie sans wildcard) et on scanne uniquement
- * son contenu direct. Si le sous-dossier n'existe pas, retourne tableau vide.
+ * On extrait le sous-dossier et on scanne uniquement son contenu direct.
+ * Si le sous-dossier n'existe pas pour ce projet, retourne tableau vide.
+ * Pas de récursion = instantané même sur gros projets.
  */
 function findMatchingFiles(projectDir: string, pattern: string): string[] {
-  // Normalise les séparateurs vers `\`.
   const norm = pattern.replace(/\//g, '\\')
   const lastSep = norm.lastIndexOf('\\')
   const subDir = lastSep >= 0 ? norm.slice(0, lastSep) : ''
@@ -117,7 +115,11 @@ function findMatchingFiles(projectDir: string, pattern: string): string[] {
   const regex = patternToRegex(fileName)
   const matches: string[] = []
   for (const entry of entries) {
-    if (entry.isFile() && regex.test(entry.name)) {
+    if (!entry.isFile()) continue
+    // Ignore les fichiers de verrou Office (~$nom.xlsx) créés quand un doc est
+    // ouvert dans Excel/Word, et les fichiers cachés Unix-style (.foo).
+    if (entry.name.startsWith('~$') || entry.name.startsWith('.')) continue
+    if (regex.test(entry.name)) {
       matches.push(path.join(scanDir, entry.name))
     }
   }

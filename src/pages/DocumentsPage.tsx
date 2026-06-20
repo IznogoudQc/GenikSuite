@@ -17,6 +17,7 @@ export function DocumentsPage() {
   const [groups, setGroups] = useState<DocumentGroupDTO[]>([])
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState<DocumentDTO | null>(null)
+  const [keyword, setKeyword] = useState('')
   const [isNew, setIsNew] = useState(false)
   const [groupsOpen, setGroupsOpen] = useState(false) // modale gestion groupes
   const [status, setStatus] = useState('')
@@ -76,6 +77,7 @@ export function DocumentsPage() {
 
   function startNew() {
     setIsNew(true)
+    setKeyword('')
     setEditing({
       id: 0,
       name: '',
@@ -89,7 +91,30 @@ export function DocumentsPage() {
 
   function startEdit(d: DocumentDTO) {
     setIsNew(false)
+    setKeyword('')
     setEditing({ ...d })
+  }
+
+  /**
+   * Applique un mot-clé au pattern : remplace le filename par `*<mot-clé>*.<ext>`
+   * (l'extension est conservée depuis le pattern actuel). Le sous-dossier est
+   * gardé tel quel. Utile pour cibler une famille de fichiers (ex: tous les
+   * "Configuration Robot_RobN.xlsm").
+   */
+  function applyKeyword(keyword: string) {
+    if (!editing) return
+    const kw = keyword.trim()
+    if (!kw) return
+
+    const norm = editing.filePath.replace(/\//g, '\\')
+    const lastSep = norm.lastIndexOf('\\')
+    const subDir = lastSep >= 0 ? norm.slice(0, lastSep) : ''
+    const oldFile = lastSep >= 0 ? norm.slice(lastSep + 1) : norm
+    const extMatch = oldFile.match(/\.([^.]+)$/)
+    const ext = extMatch ? `.${extMatch[1]}` : ''
+    const newFile = `*${kw}*${ext}`
+    const newPath = subDir ? `${subDir}\\${newFile}` : newFile
+    setEditing({ ...editing, filePath: newPath })
   }
 
   /**
@@ -270,12 +295,12 @@ export function DocumentsPage() {
               </Button>
             </div>
             {editing.isProjectRelative ? (
-              <p className="text-xs text-orange-600 mb-3 leading-relaxed flex items-center gap-1">
+              <p className="text-xs text-orange-600 mb-3 leading-relaxed flex items-start gap-1">
                 <span>🔗</span>
                 <span>
-                  <strong>Pattern projet détecté</strong> — ce document apparaîtra
-                  automatiquement dans la page Accès pour tous les projets où le fichier
-                  existe.
+                  <strong>Pattern projet détecté</strong> — ce document apparaîtra dans
+                  la page Accès pour tous les projets où le fichier existe au même
+                  emplacement.
                 </span>
               </p>
             ) : (
@@ -283,6 +308,37 @@ export function DocumentsPage() {
                 Si tu sélectionnes un fichier dans un dossier projet, GenikSuite détectera
                 automatiquement le pattern.
               </p>
+            )}
+
+            {editing.isProjectRelative && (
+              <>
+                <label className="block text-sm text-zinc-600 mb-1.5">
+                  Mot-clé du nom (optionnel)
+                </label>
+                <div className="flex gap-2 mb-1">
+                  <input
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        applyKeyword(keyword)
+                      }
+                    }}
+                    placeholder="ex: Configuration Robot"
+                    className="flex-1 px-3 py-2 rounded-lg border border-zinc-300 bg-white text-zinc-800 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
+                  />
+                  <Button variant="secondary" onClick={() => applyKeyword(keyword)}>
+                    Appliquer
+                  </Button>
+                </div>
+                <p className="text-xs text-zinc-500 mb-3 leading-relaxed">
+                  Remplace la partie nom du pattern par{' '}
+                  <code className="text-orange-600">{'*<mot-clé>*'}</code>. Utile pour
+                  matcher tous les variants (ex: <code>Configuration Robot_Rob1</code>,{' '}
+                  <code>Configuration Robot_Rob2</code>…).
+                </p>
+              </>
             )}
 
             <label className="block text-sm text-zinc-600 mb-1.5">Commentaire (optionnel)</label>
@@ -331,18 +387,22 @@ function DocRow({
   onDelete: () => void
 }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5 bg-zinc-50 hover:bg-zinc-100 rounded-lg group">
+    <div className="flex items-center gap-3 px-3 py-2.5 bg-zinc-50 hover:bg-zinc-100 rounded-lg group min-w-0">
       <button
         onClick={onOpen}
-        className="flex-1 text-left flex flex-col min-w-0"
+        className="flex-1 min-w-0 text-left flex flex-col overflow-hidden"
         title={`Ouvrir : ${doc.filePath}`}
       >
-        <span className="font-medium text-sm text-orange-600 hover:text-orange-700 truncate">
+        <span className="font-medium text-sm text-orange-600 hover:text-orange-700 truncate block w-full">
           📄 {doc.name}
         </span>
-        <span className="text-xs text-zinc-500 truncate font-mono">{doc.filePath}</span>
+        <span className="text-xs text-zinc-500 truncate font-mono block w-full">
+          {doc.filePath}
+        </span>
         {doc.comment && (
-          <span className="text-xs text-zinc-600 italic truncate">{doc.comment}</span>
+          <span className="text-xs text-zinc-600 italic truncate block w-full">
+            {doc.comment}
+          </span>
         )}
       </button>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

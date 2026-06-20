@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { invoke, IPC } from '../lib/ipc'
 import { safeConfirm } from '../lib/dialogs'
-import type { ProjectDTO, SubfolderDTO, ResolvedDocumentDTO } from '../shared/types'
+import type {
+  ProjectDTO,
+  SubfolderDTO,
+  ResolvedDocumentDTO,
+  DocumentGroupDTO
+} from '../shared/types'
 import { PageHeader } from '../components/PageHeader'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -17,6 +22,9 @@ export function AccessPage() {
   const [status, setStatus] = useState<string>('')
   // Documents projet-relatifs résolus pour le projet actif (filtrés sur l'existence).
   const [projectDocs, setProjectDocs] = useState<ResolvedDocumentDTO[]>([])
+  const [docGroups, setDocGroups] = useState<DocumentGroupDTO[]>([])
+  // Groupes ouverts : Set vide = tous fermés par défaut.
+  const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     void refresh()
@@ -46,12 +54,14 @@ export function AccessPage() {
   }, [selectedNumber])
 
   async function refresh() {
-    const [ps, ss] = await Promise.all([
+    const [ps, ss, gs] = await Promise.all([
       invoke<ProjectDTO[]>(IPC.ProjectsList),
-      invoke<SubfolderDTO[]>(IPC.SubfoldersList)
+      invoke<SubfolderDTO[]>(IPC.SubfoldersList),
+      invoke<DocumentGroupDTO[]>(IPC.DocumentGroupsList)
     ])
     setProjects(ps)
     setSubfolders(ss.filter((s) => s.enabled))
+    setDocGroups(gs)
   }
 
   async function handleResolve() {
@@ -118,6 +128,36 @@ export function AccessPage() {
     if (next.has(id)) next.delete(id)
     else next.add(id)
     setCheckedSubs(next)
+  }
+
+  // Pseudo-id pour la section "Non classé" (groupId null).
+  const UNGROUPED_ID = -1
+
+  // Regroupe les docs résolus par groupId, dans l'ordre des groupes définis.
+  const docSections = useMemo(() => {
+    const map = new Map<number, ResolvedDocumentDTO[]>()
+    for (const d of projectDocs) {
+      const key = d.groupId ?? UNGROUPED_ID
+      const arr = map.get(key) ?? []
+      arr.push(d)
+      map.set(key, arr)
+    }
+    const out: Array<{ id: number; name: string; docs: ResolvedDocumentDTO[] }> = []
+    for (const g of docGroups) {
+      const arr = map.get(g.id)
+      if (arr && arr.length) out.push({ id: g.id, name: g.name, docs: arr })
+    }
+    const ungrouped = map.get(UNGROUPED_ID)
+    if (ungrouped && ungrouped.length)
+      out.push({ id: UNGROUPED_ID, name: 'Non classé', docs: ungrouped })
+    return out
+  }, [projectDocs, docGroups])
+
+  function toggleGroup(id: number) {
+    const next = new Set(expandedGroups)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setExpandedGroups(next)
   }
 
   /** Ouvre un fichier projet déjà résolu (chemin absolu). */
@@ -219,28 +259,49 @@ export function AccessPage() {
           </Card>
         )}
 
-        {selectedNumber && projectDocs.length > 0 && (
+        {selectedNumber && docSections.length > 0 && (
           <Card className="p-6">
             <h3 className="text-sm font-semibold text-zinc-900 mb-3">
               Documents du projet{' '}
               <span className="text-zinc-500 font-normal">(projet {selectedNumber})</span>
             </h3>
-            <div className="space-y-1.5">
-              {projectDocs.map((d, i) => (
-                <button
-                  key={`${d.id}-${i}`}
-                  onClick={() => openProjectDoc(d)}
-                  title={d.resolvedPath}
-                  className="w-full text-left flex flex-col px-3 py-2 bg-zinc-50 hover:bg-zinc-100 rounded-lg group"
-                >
-                  <span className="font-medium text-sm text-orange-600 group-hover:text-orange-700">
-                    📄 {basename(d.resolvedPath)}
-                  </span>
-                  <span className="text-xs text-zinc-500 truncate">
-                    {d.name}
-                  </span>
-                </button>
-              ))}
+            <div className="space-y-2">
+              {docSections.map((sec) => {
+                const isOpen = expandedGroups.has(sec.id)
+                return (
+                  <div key={sec.id} className="border border-zinc-200 rounded-lg">
+                    <button
+                      onClick={() => toggleGroup(sec.id)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-zinc-50 rounded-lg"
+                    >
+                      <span className="text-zinc-500 text-xs">{isOpen ? '▼' : '▶'}</span>
+                      <span className="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        {sec.name}
+                      </span>
+                      <span className="text-zinc-400 text-xs">· {sec.docs.length}</span>
+                    </button>
+                    {isOpen && (
+                      <div className="space-y-1.5 px-2 pb-2">
+                        {sec.docs.map((d, i) => (
+                          <button
+                            key={`${d.id}-${i}`}
+                            onClick={() => openProjectDoc(d)}
+                            title={d.resolvedPath}
+                            className="w-full text-left flex flex-col px-3 py-2 bg-zinc-50 hover:bg-zinc-100 rounded-lg group min-w-0"
+                          >
+                            <span className="font-medium text-sm text-orange-600 group-hover:text-orange-700 truncate block w-full">
+                              📄 {basename(d.resolvedPath)}
+                            </span>
+                            <span className="text-xs text-zinc-500 truncate block w-full">
+                              {d.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </Card>
         )}
