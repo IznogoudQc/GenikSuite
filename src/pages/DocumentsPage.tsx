@@ -19,6 +19,15 @@ export function DocumentsPage() {
   const [editing, setEditing] = useState<DocumentDTO | null>(null)
   const [keyword, setKeyword] = useState('')
   const [isNew, setIsNew] = useState(false)
+  // Groupes ouverts : Set vide = tous fermés par défaut.
+  const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
+
+  function toggleGroup(id: number) {
+    const next = new Set(expandedGroups)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setExpandedGroups(next)
+  }
   const [groupsOpen, setGroupsOpen] = useState(false) // modale gestion groupes
   const [status, setStatus] = useState('')
 
@@ -215,24 +224,36 @@ export function DocumentsPage() {
             </p>
           ) : (
             <div className="space-y-5">
-              {sections.map((sec) => (
-                <div key={sec.id}>
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 mb-2 pl-1">
-                    {sec.name} <span className="text-zinc-400">· {sec.docs.length}</span>
-                  </h3>
-                  <div className="space-y-1.5">
-                    {sec.docs.map((d) => (
-                      <DocRow
-                        key={d.id}
-                        doc={d}
-                        onOpen={() => openDoc(d)}
-                        onEdit={() => startEdit(d)}
-                        onDelete={() => deleteDoc(d)}
-                      />
-                    ))}
+              {sections.map((sec) => {
+                const isOpen = expandedGroups.has(sec.id)
+                return (
+                  <div key={sec.id} className="border border-zinc-200 rounded-lg">
+                    <button
+                      onClick={() => toggleGroup(sec.id)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-zinc-50 rounded-lg"
+                    >
+                      <span className="text-zinc-500 text-xs">{isOpen ? '▼' : '▶'}</span>
+                      <span className="text-xs font-semibold uppercase tracking-wide text-zinc-700">
+                        {sec.name}
+                      </span>
+                      <span className="text-zinc-400 text-xs">· {sec.docs.length}</span>
+                    </button>
+                    {isOpen && (
+                      <div className="space-y-1.5 px-2 pb-2">
+                        {sec.docs.map((d) => (
+                          <DocRow
+                            key={d.id}
+                            doc={d}
+                            onOpen={() => openDoc(d)}
+                            onEdit={() => startEdit(d)}
+                            onDelete={() => deleteDoc(d)}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </Card>
@@ -310,36 +331,36 @@ export function DocumentsPage() {
               </p>
             )}
 
-            {editing.isProjectRelative && (
-              <>
-                <label className="block text-sm text-zinc-600 mb-1.5">
-                  Mot-clé du nom (optionnel)
-                </label>
-                <div className="flex gap-2 mb-1">
-                  <input
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        applyKeyword(keyword)
-                      }
-                    }}
-                    placeholder="ex: Configuration Robot"
-                    className="flex-1 px-3 py-2 rounded-lg border border-zinc-300 bg-white text-zinc-800 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-                  />
-                  <Button variant="secondary" onClick={() => applyKeyword(keyword)}>
-                    Appliquer
-                  </Button>
-                </div>
-                <p className="text-xs text-zinc-500 mb-3 leading-relaxed">
-                  Remplace la partie nom du pattern par{' '}
-                  <code className="text-orange-600">{'*<mot-clé>*'}</code>. Utile pour
-                  matcher tous les variants (ex: <code>Configuration Robot_Rob1</code>,{' '}
-                  <code>Configuration Robot_Rob2</code>…).
-                </p>
-              </>
-            )}
+            <label className="block text-sm text-zinc-600 mb-1.5">
+              Mot-clé du nom (optionnel)
+            </label>
+            <div className="flex gap-2 mb-1">
+              <input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    applyKeyword(keyword)
+                  }
+                }}
+                placeholder="ex: Configuration Robot"
+                disabled={!editing.filePath}
+                className="flex-1 px-3 py-2 rounded-lg border border-zinc-300 bg-white text-zinc-800 focus:outline-none focus:ring-2 focus:ring-orange-500/40 disabled:bg-zinc-100 disabled:text-zinc-400"
+              />
+              <Button
+                variant="secondary"
+                onClick={() => applyKeyword(keyword)}
+                disabled={!editing.filePath || !keyword.trim()}
+              >
+                Appliquer
+              </Button>
+            </div>
+            <p className="text-xs text-zinc-500 mb-3 leading-relaxed">
+              {editing.filePath
+                ? <>Remplace la partie nom du pattern par <code className="text-orange-600">{'*<mot-clé>*'}</code>. Utile pour matcher tous les variants (ex: <code>Configuration Robot_Rob1</code>, <code>Configuration Robot_Rob2</code>…).</>
+                : <>Disponible après sélection d'un fichier avec « Parcourir ».</>}
+            </p>
 
             <label className="block text-sm text-zinc-600 mb-1.5">Commentaire (optionnel)</label>
             <input
